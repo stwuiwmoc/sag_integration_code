@@ -34,7 +34,8 @@ def read_raw_measurement(fname):
     raw = np.loadtxt(fname)
     num, x, y, azimuth, s1, s2, s3 = raw.T
     sag = (s2*2 - s1 - s3)/2
-    return y, sag
+    option = [x, azimuth]
+    return y, sag, option
    
 def read_raw_calc(fname):
     # x, y, z, rho, R : [mm]
@@ -105,7 +106,7 @@ if __name__ == '__main__':
     
     a = 1 #縦倍率
     ## measurement data reading
-    y_m_raw, sag_m_raw = read_raw_measurement("raw_data/0921_xm100_0deg.txt")
+    y_m_raw, sag_m_raw, option = read_raw_measurement("raw_data/0921_xm100_0deg.txt")
     
     ## caluculated data reading
     y_c_raw, sag_c_raw = read_raw_calc("raw_data/sample.csv")
@@ -214,6 +215,7 @@ if __name__ == '__main__':
     ax47.grid()
 
     fig4.tight_layout()
+    fig4.savefig(mkfolder() + "test.png")
     
     
     ## plot--------------------------------------------------------------------

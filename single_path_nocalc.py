@@ -35,9 +35,13 @@ if __name__ == '__main__':
     b_max_pitch = 50
     
     a = 1 #縦倍率
+    
+    k = 0
+    fnum = str(k).zfill(3)
     ## measurement data reading
-    read_fname = "raw_data/0922xm130_3deg/0922xm130_3deg_000.txt"
-    y_m_raw, sag_m_raw = sgp.read_raw_measurement(read_fname)
+    read_fname = "raw_data/0922xm130_3deg/0922xm130_3deg_" + fnum + ".txt"
+    y_m_raw, sag_m_raw, option = sgp.read_raw_measurement(read_fname)
+    azimuth = option[1][0]
     y_samp_cut = sgp.y_limb_cut(y_m_raw, y_m_raw, y_min-b_max_pitch, y_max+b_max_pitch)
 
     sag_m_cut = sgp.y_limb_cut(sag_m_raw, y_m_raw, y_min-b_max_pitch, y_max+b_max_pitch)
@@ -53,7 +57,7 @@ if __name__ == '__main__':
     
     fig1 = plt.figure(figsize=(14,14))
     gs1 = fig1.add_gridspec(4,2)
-    
+    fig1.suptitle("no calc, num = "+fnum+" , azimuth = " + str(azimuth) + " deg")
     
     ax13 = fig1.add_subplot(gs1[0,1])
     ax13.set_ylabel("sag ( 20mm pitch)")
@@ -126,4 +130,6 @@ if __name__ == '__main__':
     ax12.grid()
 
     fig1.tight_layout()
-    
+    fig1.savefig(mkfolder("/0922xm130_3deg") + "0922xm130_3deg_" + fnum + ".png")
+    fig1.clear()
+    fig1.clf()
