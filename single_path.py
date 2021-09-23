@@ -107,8 +107,7 @@ if __name__ == '__main__':
     
     y_samp_cut = y_limb_cut(y_m_raw, y_m_raw, y_min-b_max_pitch, y_max+b_max_pitch)
     
-    f_interp_m_cut = sp.interpolate.interp1d(y_m_raw, sag_m_raw, kind="linear")
-    sag_m_interp_cut = f_interp_m_cut(y_samp_cut)
+    sag_m_interp_cut = y_limb_cut(sag_m_raw, y_m_raw, y_min-b_max_pitch, y_max+b_max_pitch)
     f_interp_c_cut = sp.interpolate.interp1d(y_c_raw, sag_c_raw, kind="linear")
     sag_c_interp_cut = f_interp_c_cut(y_samp_cut)
     
