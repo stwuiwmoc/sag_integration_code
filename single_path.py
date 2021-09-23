@@ -28,10 +28,11 @@ def mkfolder(suffix = ""):
     return folder
 
 def read_raw_measurement(fname):
-    # x, y, z : [mm]
+    # x, y : [mm]
+    # azimuth : [degree]
     # s : [nm]
     raw = np.loadtxt(fname)
-    num, x, y, z, s1, s2, s3 = raw.T
+    num, x, y, azimuth, s1, s2, s3 = raw.T
     sag = (s2*2 - s1 - s3)/2
     return y, sag
    
@@ -163,6 +164,8 @@ if __name__ == '__main__':
     y_start_num = 4
     y_start_pitch = 5
     y_min_s = y_min + y_start_num * y_start_pitch
+    color=["blue", "orange", "green", "red", "lightblue", "yellow", "lightgreen", "pink"]
+    
     for j in range(y_start_num):
         
         y_samp_s = np.arange(y_max - j*y_start_pitch, y_min + j*y_start_pitch, -pitch_s, dtype="float")
@@ -182,13 +185,17 @@ if __name__ == '__main__':
         height_diff = height - height_fit
         
         ## plot--------------------------------------------------------------------
-        ax43.plot(y_samp_s, sag_m_interp_diff)
-        ax41.plot(y_samp_s, tilt)
+        ax43.plot(y_samp_s, sag_m_interp_diff, color=color[j], label="start = "+str(y_samp_s.max()))
+        ax41.plot(y_samp_s, tilt, color=color[j])
 
         
-        ax42.plot(y_samp_s, height, linewidth=3)
-        ax42.plot(y_samp_s, height_fit, marker=".")
-        ax44.plot(y_samp_s, height_diff)
+        ax42.plot(y_samp_s, height, color=color[j])
+        ax42.plot(y_samp_s, height_fit, marker=".", color=color[j+4], label="fit for "+str(y_samp_s.max()))
+        ax44.plot(y_samp_s, height_diff, color=color[j])
+    
+    ax43.legend()
+    ax42.legend()
+    
     
     ax45 = fig4.add_subplot(gs4[0,0])
     ax45.plot(y_m_raw, sag_m_raw)

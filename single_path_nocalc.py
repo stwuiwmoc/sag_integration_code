@@ -31,12 +31,13 @@ def mkfolder(suffix = ""):
 
 if __name__ == '__main__':
     pitch_s = 20 #[mm]
-    y_min, y_max = -740,740
+    y_min, y_max = -750,750
     b_max_pitch = 50
     
     a = 1 #縦倍率
     ## measurement data reading
-    y_m_raw, sag_m_raw = sgp.read_raw_measurement("raw_data/0922xm130_3deg/0922xm130_3deg_000.txt")
+    read_fname = "raw_data/0922xm130_3deg/0922xm130_3deg_000.txt"
+    y_m_raw, sag_m_raw = sgp.read_raw_measurement(read_fname)
     y_samp_cut = sgp.y_limb_cut(y_m_raw, y_m_raw, y_min-b_max_pitch, y_max+b_max_pitch)
 
     sag_m_cut = sgp.y_limb_cut(sag_m_raw, y_m_raw, y_min-b_max_pitch, y_max+b_max_pitch)
@@ -75,6 +76,7 @@ if __name__ == '__main__':
     y_start_pitch = 5
     y_min_s = y_min + y_start_num * y_start_pitch
     
+    color=["blue", "orange", "green", "red", "lightblue", "yellow", "lightgreen", "pink"]
     for j in range(y_start_num):
         
         y_samp_s = np.arange(y_max - j*y_start_pitch, y_min + j*y_start_pitch, -pitch_s, dtype="float")
@@ -94,13 +96,16 @@ if __name__ == '__main__':
         height_diff = height - height_fit
         
         ## plot--------------------------------------------------------------------
-        ax13.plot(y_samp_s, sag_m_interp_diff)
-        ax14.plot(y_samp_s, tilt)
-
+        ax13.plot(y_samp_s, sag_m_interp_diff, color=color[j], label="start = "+str(y_samp_s.max()))
+        ax14.plot(y_samp_s, tilt, color=color[j])
+       
+        ax15.plot(y_samp_s, height, color=color[j])
+        ax15.plot(y_samp_s, height_fit, marker=".", color=color[j+4], label="fit for "+str(y_samp_s.max()))
         
-        ax15.plot(y_samp_s, height, linewidth=3)
-        ax15.plot(y_samp_s, height_fit, marker=".")
-        ax16.plot(y_samp_s, height_diff)
+        ax16.plot(y_samp_s, height_diff, color=color[j])
+    
+    ax13.legend()
+    ax15.legend()
     
     ax17 = fig1.add_subplot(gs1[0,0])
     ax17.plot(y_m_raw, sag_m_raw)
