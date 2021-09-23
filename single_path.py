@@ -140,22 +140,22 @@ if __name__ == '__main__':
     ## y方向のデータ幅を20mmにして逐次積分
     polyfit_order = 6
     
-    fig4 = plt.figure(figsize=(7,7))
-    gs4 = fig4.add_gridspec(4,1)
+    fig4 = plt.figure(figsize=(14,14))
+    gs4 = fig4.add_gridspec(4,2)
     
-    ax43 = fig4.add_subplot(gs4[0,0])
+    ax43 = fig4.add_subplot(gs4[0,1])
     ax43.set_ylabel("sag ( 20mm pitch)")
     ax43.grid()
     
-    ax41 = fig4.add_subplot(gs4[1,0])
+    ax41 = fig4.add_subplot(gs4[1,1])
     ax41.set_ylabel("tilt")
     ax41.grid()
     
-    ax42 = fig4.add_subplot(gs4[2,0])
+    ax42 = fig4.add_subplot(gs4[2,1])
     ax42.set_ylabel("height")
     ax42.grid()
     
-    ax44 = fig4.add_subplot(gs4[3,0])
+    ax44 = fig4.add_subplot(gs4[3,1])
     ax44.set_ylabel("height - " + str(polyfit_order)+" order polyfit")
     ax44.grid()
     
@@ -186,13 +186,31 @@ if __name__ == '__main__':
         ax41.plot(y_samp_s, tilt)
 
         
-        ax42.plot(y_samp_s, height)
+        ax42.plot(y_samp_s, height, linewidth=3)
         ax42.plot(y_samp_s, height_fit, marker=".")
         ax44.plot(y_samp_s, height_diff)
+    
+    ax45 = fig4.add_subplot(gs4[0,0])
+    ax45.plot(y_m_raw, sag_m_raw)
+    ax45.set_ylabel("measurement sag [nm]")
+    ax45.set_title("raw_data")
+    
+    ax46 = fig4.add_subplot(gs4[1,0])
+    ax46.plot(y_samp_cut, sag_m_interp_cut, label="measurement")
+    ax46.plot(y_samp_cut, sag_c_fit, label="calculated")
+    ax46.set_title("fittig calculated")
+    ax46.grid()
+    
+    ax47 = fig4.add_subplot(gs4[2,0])
+    ax47.plot(y_samp_cut, sag_diff)
+    ax47.set_title("measurement - calculate")
+    ax47.grid()
+
     fig4.tight_layout()
     
     
     ## plot--------------------------------------------------------------------
+    """
     fig1 = plt.figure(figsize=(7,12))
     gs1 = fig1.add_gridspec(6,1)
     
@@ -227,3 +245,4 @@ if __name__ == '__main__':
     ax16.grid()
 
     fig1.tight_layout()
+    """
