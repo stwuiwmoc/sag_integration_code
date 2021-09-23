@@ -43,11 +43,18 @@ def read_raw_calc(fname):
     sag_nm = sag * 1e6
     return y, sag_nm
 
+def y_limb_cut(y, y_min, y_max):
+    idxmin = abs(y-y_min).argmin()
+    idxmax = abs(y-y_max).argmin()
+    y_new = y[idxmax:idxmin]
+    return y_new
+
 def size_adjust(X, sag):
     #a, c = X
     #sag_ac = a * sag + c
     c = X
     sag_c = sag + c
+    
     return sag_c
     
 def fitting_func(X, Param):
@@ -59,7 +66,6 @@ def fitting_func(X, Param):
 
 if __name__ == '__main__':
     pitch_s = 20 #[mm]
-    pitch_fit = 5
     y_min, y_max = -800, 800
     
     ## measurement data reading
@@ -84,7 +90,7 @@ if __name__ == '__main__':
     ## =======================================================================
     ## m, cのy方向のデータ数を合わせる
     
-    y_samp_fit = np.arange(y_max, y_min, -pitch_fit)
+    y_samp_fit = y_limb_cut(y_m_raw, y_min-1, y_max+1)
     
     f_interp_m_fit = sp.interpolate.interp1d(y_m_raw, sag_m_raw, kind="linear")
     sag_m_intrep_fit = f_interp_m_fit(y_samp_fit)
