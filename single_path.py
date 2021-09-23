@@ -71,28 +71,28 @@ def y_limb_cut(arr_cut, y_idx, y_min, y_max):
     y_new = arr_cut[idxmax:idxmin]
     return y_new
 
-def size_adjust(X, sag, y, y_min, y_max):
-    
-    
-    b, c = X
-    b = int(b)
-    sag_b = np.roll(sag, b)
-    sag_bc = 1 *sag_b + c
-    # ずらした分が入らないように端を切り落とし
-    sag_cut = y_limb_cut(sag_bc, y, y_min, y_max)
-    return sag_cut
-    
+def poly_calc(fanc, x):
+    order = len(fanc)
+    y = 0
+    for i in range(order):
+        y = y + fanc[i]*x**(order - i -1 )
+    return y
+
+def size_adjust(X, sag_func, y):    
+    a, b, c = X
+    sag_bc =  a*poly_calc(sag_func, y-b) + c
+    return sag_bc
+  
 def fitting_func(X, Param):
-    sag_m, sag_c, y, y_min, y_max = Param
+    sag_m, sag_c_func, y = Param
     
-    sag_c_adjust = size_adjust(X, sag_c, y, y_min, y_max)
-    sag_m_cut = y_limb_cut(sag_m, y, y_min, y_max)
-    sigma = sum( (sag_m_cut - sag_c_adjust)**2 )
+    sag_c_adjust = size_adjust(X, sag_c_func, y)
+    sigma = sum( (sag_m - sag_c_adjust)**2 )
     return sigma
 
 if __name__ == '__main__':
     pitch_s = 20 #[mm]
-    y_min, y_max = -800, 800
+    y_min, y_max = -740,740
     b_max_pitch = 50
     
     
@@ -108,8 +108,9 @@ if __name__ == '__main__':
     y_samp_cut = y_limb_cut(y_m_raw, y_m_raw, y_min-b_max_pitch, y_max+b_max_pitch)
     
     sag_m_interp_cut = y_limb_cut(sag_m_raw, y_m_raw, y_min-b_max_pitch, y_max+b_max_pitch)
-    f_interp_c_cut = sp.interpolate.interp1d(y_c_raw, sag_c_raw, kind="linear")
-    sag_c_interp_cut = f_interp_c_cut(y_samp_cut)
+    #f_interp_c_cut = sp.interpolate.interp1d(y_c_raw, sag_c_raw, kind="linear")
+    f_interp_c_cut = np.polyfit(y_c_raw, sag_c_raw, 4)
+    sag_c_interp_cut = poly_calc(f_interp_c_cut, y_samp_cut)
     
     
     ## =======================================================================
@@ -117,16 +118,13 @@ if __name__ == '__main__':
     
     b_init = 0
     c_init = sag_m_interp_cut.mean() - sag_c_interp_cut.mean()
-    param = [sag_m_interp_cut, sag_c_interp_cut, y_samp_cut, y_min, y_max]
+    param = [sag_m_interp_cut, f_interp_c_cut, y_samp_cut]
     
-    result1 = sp.optimize.minimize(fitting_func, x0=(b_init, c_init), 
+    result1 = sp.optimize.minimize(fitting_func, x0=(1, b_init, c_init), 
                                    args=param, method="Powell")
-    y_min_f = y_min + b_max_pitch
-    y_max_f = y_max - b_max_pitch
-    y_samp_fit = y_limb_cut(y_samp_cut, y_samp_cut, y_min_f, y_max_f)
-    sag_c_fit = size_adjust(result1.x, sag_c_interp_cut, y_samp_cut, y_min_f, y_max_f)
-    sag_m_fit = y_limb_cut(sag_m_interp_cut, y_samp_cut, y_min_f, y_max_f)
-    sag_diff = sag_m_fit - sag_c_fit
+    
+    sag_c_fit = size_adjust(result1.x, f_interp_c_cut, y_samp_cut)
+    sag_diff = 2*(sag_m_interp_cut - sag_c_fit)
     
     
     ## =======================================================================
@@ -147,17 +145,17 @@ if __name__ == '__main__':
     
     y_start_num = 4
     y_start_pitch = 5
-    y_min_s = y_min_f + y_start_num * y_start_pitch
+    y_min_s = y_min + y_start_num * y_start_pitch
     for j in range(y_start_num):
         
-        y_samp_s = np.arange(y_max_f - j*y_start_pitch, y_min_s + j*y_start_pitch, -pitch_s)
+        y_samp_s = np.arange(y_max - j*y_start_pitch, y_min_s + j*y_start_pitch, -pitch_s)
         
-        f_interp_diff = sp.interpolate.interp1d(y_samp_fit, 2*sag_diff, kind="linear")
+        f_interp_diff = sp.interpolate.interp1d(y_samp_cut, sag_diff, kind="cubic")
         sag_m_interp_diff = f_interp_diff(y_samp_s)
         
         tilt = np.zeros(len(y_samp_s))
         for i in range( len(y_samp_s)-1 ):
-            tilt[i+1] = tilt[i] + sag_m_interp_diff[i]
+            tilt[i+1] = tilt[i] + sag_m_interp_diff[i]    
         
         height = np.zeros(len(y_samp_s))
         for i in range( len(y_samp_s)-1 ):
@@ -195,13 +193,13 @@ if __name__ == '__main__':
 
     
     ax15 = fig1.add_subplot(gs1[4,0])
-    ax15.plot(y_samp_fit, sag_m_fit, label="measurement")
-    ax15.plot(y_samp_fit, sag_c_fit, label="calculated")
+    ax15.plot(y_samp_cut, sag_m_interp_cut, label="measurement")
+    ax15.plot(y_samp_cut, sag_c_fit, label="calculated")
     ax15.set_title("fittig calculated sag")
     ax15.grid()
     
     ax16 = fig1.add_subplot(gs1[5,0])
-    ax16.plot(y_samp_fit, sag_diff)
+    ax16.plot(y_samp_cut, sag_diff)
     ax16.set_title("measurement - calculate")
     ax16.grid()
 
