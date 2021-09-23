@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+ # -*- coding: utf-8 -*-
 """
 Created on Wed Sep 22 16:45:52 2021
 
@@ -99,7 +99,7 @@ def fitting_func(X, Param):
 
 if __name__ == '__main__':
     pitch_s = 20 #[mm]
-    y_min, y_max = -740,740
+    y_min, y_max = -750,750
     b_max_pitch = 50
     
     a = 1 #縦倍率
@@ -160,7 +160,7 @@ if __name__ == '__main__':
     ax44.grid()
     
     
-    y_start_num = 1
+    y_start_num = 4
     y_start_pitch = 5
     y_min_s = y_min + y_start_num * y_start_pitch
     for j in range(y_start_num):
