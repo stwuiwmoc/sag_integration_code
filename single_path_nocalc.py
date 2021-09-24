@@ -23,7 +23,7 @@ def mkfolder(suffix = ""):
     Returns
     -------
     str ( script name + suffix )
-    """
+    """ 
     filename = os.path.basename(__file__)
     filename = filename.replace(".py", "") + suffix
     folder = "mkfolder/" + filename + "/"
@@ -43,7 +43,8 @@ if __name__ == '__main__':
         print(time.time() - start)
         fnum = str(k).zfill(3)
         ## measurement data reading
-        read_fname = "raw_data/0922xm130_3deg/0922xm130_3deg_" + fnum + ".txt"
+        fname_txt = "0922xm130_3deg"
+        read_fname = "raw_data/"+fname_txt+"/"+fname_txt+"_" + fnum + ".txt"
         y_m_raw, sag_m_raw, option = sgp.read_raw_measurement(read_fname)
         azimuth = option[1][0]
         y_samp_cut = sgp.y_limb_cut(y_m_raw, y_m_raw, y_min-b_max_pitch, y_max+b_max_pitch)
@@ -61,23 +62,26 @@ if __name__ == '__main__':
         
         fig1 = plt.figure(figsize=(14,14))
         gs1 = fig1.add_gridspec(4,2)
-        fig1.suptitle("no calc, num = "+fnum+" , azimuth = " + str(azimuth) + " deg")
+        fig1.suptitle(fname_txt+"\nno calc, num = "+fnum+" , azimuth = " + str(azimuth) + " deg")
         
         ax13 = fig1.add_subplot(gs1[0,1])
         ax13.set_ylabel("sag ( 20mm pitch)")
         ax13.grid()
+        ax13.set_ylim(-800,800)
         
         ax14 = fig1.add_subplot(gs1[1,1])
         ax14.set_ylabel("tilt")
         ax14.grid()
+        ax14.set_ylim(-1200,800)
         
         ax15 = fig1.add_subplot(gs1[2,1])
         ax15.set_ylabel("height")
-        ax15.grid()
+        ax15.set_ylim(-40000, 15000)
         
         ax16 = fig1.add_subplot(gs1[3,1])
         ax16.set_ylabel("height - " + str(polyfit_order)+" order polyfit")
         ax16.grid()
+        ax16.set_ylim(-1200,1200)
         
         
         y_start_num = 4
@@ -132,8 +136,9 @@ if __name__ == '__main__':
         ax12.plot(y_samp_cut, sag_diff)
         ax12.set_title("measurement - calculate")
         ax12.grid()
+        ax12.set_ylim(-600, 800)
     
         fig1.tight_layout()
-        fig1.savefig(mkfolder("/0922xm130_3deg") + "0922xm130_3deg_" + fnum + ".png")
+        fig1.savefig(mkfolder("/"+fname_txt) + fname_txt +"_" + fnum + ".png")
         fig1.clear()
         fig1.clf()
