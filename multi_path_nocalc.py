@@ -46,7 +46,7 @@ if __name__ == '__main__':
         fname_txt = "0922xm130_3deg"
         read_fname = "raw_data/"+fname_txt+"/"+fname_txt+"_" + fnum + ".txt"
         y_m_raw, sag_m_raw, option = sgp.read_raw_measurement(read_fname)
-        azimuth = option[1][0]
+        azimuth = option[1][0] + 9.893
        
         ## =======================================================================
         ## 前処理
@@ -146,5 +146,5 @@ if __name__ == '__main__':
     
         fig1.tight_layout()
         fig1.savefig(mkfolder("/"+fname_txt) + fname_txt +"_" + fnum + ".png")
-        #fig1.clear()
-        #fig1.clf()
+        fig1.clear()
+        fig1.clf()
