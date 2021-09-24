@@ -117,7 +117,7 @@ if __name__ == '__main__':
     y_min, y_max = -750,750
     b_max_pitch = 50
     
-    a = 1 #縦倍率
+    a = 0.99809 #縦倍率
     ## measurement data reading
     y_m_raw, sag_m_raw, x_m_raw, azimuth_m_raw = read_raw_measurement("raw_data/0921_xm100_0deg.txt", True)
     azimuth = int(azimuth_m_raw[0] + 9.893)

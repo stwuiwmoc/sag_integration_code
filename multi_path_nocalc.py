@@ -35,7 +35,7 @@ if __name__ == '__main__':
     y_min, y_max = -750,750
     b_max_pitch = 50
     
-    a = 1 #縦倍率
+    a = 0.99809 #縦倍率
     
     fname_txt = "0922xm130_3deg"
     data_id_sum = 0
@@ -92,7 +92,7 @@ if __name__ == '__main__':
         ax16.grid()
         ax16.set_ylim(-1200,1200)
          
-        y_start_num = 4
+        y_start_num = 1
         y_start_pitch = 5
         save_num = 0
         y_min_s = y_min + y_start_num * y_start_pitch
