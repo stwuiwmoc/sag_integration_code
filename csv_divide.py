@@ -29,32 +29,29 @@ def mkfolder(suffix = ""):
 if __name__ == "__main__":
     read_fname = "raw_data/x-130deg3sag.csv"
     nametxt = read_fname[9:-4] + "_"
-    
+
     with open(read_fname, encoding="utf-8") as readfile:
         i = 0
         write_fname = nametxt + str(i).zfill(3) + ".csv"
         foldername = mkfolder() + write_fname
         start = time.time()
-    
+
         reader = csv.reader(readfile)
-        
+    
         for row in reader:
             with open(foldername, "a", encoding="utf-8", newline="") as writefile:
-                writer = csv.writer(writefile)
-                writer.writerow(row)
-                writefile.close()
-            
-            
+                if len(row[0]) != 0:
+                    writer = csv.writer(writefile)
+                    writer.writerow(row)
+                    writefile.close()
+    
             if len(row[0]) == 0:
                 i = i + 1
                 write_fname = nametxt + str(i).zfill(3) + ".csv"
                 foldername = mkfolder()+write_fname
                 print(time.time() - start)
-                
+    
                 with open(foldername, "a", encoding="utf-8", newline="") as writefile:
                     writer = csv.writer(writefile)
                     writer.writerow(["X","Y","Z","theta","rho","1/rho","sag"])
                     writefile.close()
-                
-        
-    
