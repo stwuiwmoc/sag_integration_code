@@ -112,11 +112,14 @@ if __name__ == '__main__':
     y_c_raw, sag_c_raw = read_raw_calc("raw_data/sample.csv")
     
     ## =======================================================================
+    ## 前処理
+    sag_m_gaussian = sp.ndimage.filters.gaussian_filter(sag_m_raw, 2)
+    
     ## m, cのy方向のデータ数を合わせる
     
     y_samp_cut = y_limb_cut(y_m_raw, y_m_raw, y_min-b_max_pitch, y_max+b_max_pitch)
     
-    sag_m_interp_cut = y_limb_cut(sag_m_raw, y_m_raw, y_min-b_max_pitch, y_max+b_max_pitch)
+    sag_m_interp_cut = y_limb_cut(sag_m_gaussian, y_m_raw, y_min-b_max_pitch, y_max+b_max_pitch)
     f_interp_c_cut = np.polynomial.polynomial.polyfit(y_c_raw, sag_c_raw, 4)
     sag_c_interp_cut = poly_calc(f_interp_c_cut, y_samp_cut)
     

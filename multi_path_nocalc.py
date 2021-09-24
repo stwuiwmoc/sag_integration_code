@@ -47,9 +47,15 @@ if __name__ == '__main__':
         read_fname = "raw_data/"+fname_txt+"/"+fname_txt+"_" + fnum + ".txt"
         y_m_raw, sag_m_raw, option = sgp.read_raw_measurement(read_fname)
         azimuth = option[1][0]
-        y_samp_cut = sgp.y_limb_cut(y_m_raw, y_m_raw, y_min-b_max_pitch, y_max+b_max_pitch)
-    
-        sag_m_cut = sgp.y_limb_cut(sag_m_raw, y_m_raw, y_min-b_max_pitch, y_max+b_max_pitch)
+       
+        ## =======================================================================
+        ## 前処理
+        sag_m_filter = sp.ndimage.filters.median_filter(sag_m_raw, 15)
+        #sag_m_filter = sag_m_raw
+        
+        ## m, cのy方向のデータ数を合わせる
+        y_samp_cut = sgp.y_limb_cut(y_m_raw, y_m_raw, y_min-b_max_pitch, y_max+b_max_pitch)    
+        sag_m_cut = sgp.y_limb_cut(sag_m_filter, y_m_raw, y_min-b_max_pitch, y_max+b_max_pitch)
         
         f_sag_c_fit = np.polynomial.polynomial.polyfit(y_samp_cut, sag_m_cut, 4)
         sag_c_fit = sgp.poly_calc(f_sag_c_fit, y_samp_cut)
@@ -140,5 +146,5 @@ if __name__ == '__main__':
     
         fig1.tight_layout()
         fig1.savefig(mkfolder("/"+fname_txt) + fname_txt +"_" + fnum + ".png")
-        fig1.clear()
-        fig1.clf()
+        #fig1.clear()
+        #fig1.clf()
