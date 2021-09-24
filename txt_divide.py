@@ -26,7 +26,7 @@ def mkfolder(suffix = ""):
 
 if __name__ == "__main__":
     
-    read_fname = "0922xm130_3deg.txt"
+    read_fname = "0923xm130_3deg.txt"
     nametxt = read_fname[:-4] + "_"
     
     with open("raw_data/"+read_fname, "r") as readfile:
