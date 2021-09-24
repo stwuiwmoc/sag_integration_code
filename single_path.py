@@ -8,6 +8,7 @@ Created on Wed Sep 22 16:45:52 2021
 import numpy as np
 import scipy as sp
 import matplotlib.pyplot as plt
+import pickle
 
 def mkfolder(suffix = ""):
     import os
@@ -104,6 +105,13 @@ def fitting_func(X, Param):
     sigma = sum( (sag_m - sag_c_adjust)**2 )
     return sigma
 
+def rotate_matrix(theta_deg):
+    theta = np.deg2rad(theta_deg)
+    matrix = np.array([[ np.cos(theta), np.sin(theta)],
+                       [-np.sin(theta), np.cos(theta)]])
+    return matrix
+    
+
 if __name__ == '__main__':
     pitch_s = 20 #[mm]
     y_min, y_max = -750,750
@@ -115,7 +123,7 @@ if __name__ == '__main__':
     azimuth = int(azimuth_m_raw[0] + 9.893)
     
     ## caluculated data reading
-    y_c_raw, sag_c_raw, z_c_raw = read_raw_calc("raw_data/sample.csv", True)
+    y_c_raw, sag_c_raw = read_raw_calc("raw_data/sample.csv")
     
     ## =======================================================================
     ## 前処理
@@ -174,8 +182,11 @@ if __name__ == '__main__':
     
     y_start_num = 1
     y_start_pitch = 5
+    save_num = 1
     y_min_s = y_min + y_start_num * y_start_pitch
     color=["blue", "orange", "green", "red", "lightblue", "yellow", "lightgreen", "pink"]
+    
+    write_fname = mkfolder() + "test.txt"
     
     for j in range(y_start_num):
         
@@ -183,12 +194,6 @@ if __name__ == '__main__':
         
         f_interp_diff = sp.interpolate.interp1d(y_samp_cut, sag_diff, kind="cubic")
         sag_m_interp_diff = f_interp_diff(y_samp_s)
-        
-        f_interp_x_m = sp.interpolate.interp1d(y_m_raw, x_m_raw, kind="linear")
-        x_m_interp = f_interp_x_m(y_samp_s)
-        
-        f_interp_z_c = sp.interpolate.interp1d(y_c_raw, z_c_raw, kind="linear")
-        z_c_interp = f_interp_z_c(y_samp_s)
         
         tilt = np.zeros(len(y_samp_s))
         for i in range( len(y_samp_s)-1 ): 
@@ -202,6 +207,20 @@ if __name__ == '__main__':
         height_fit = poly_calc(f_height_fit, y_samp_s)
         height_diff = height - height_fit
         
+        if j == save_num:
+            ## savetxt ---------------------------------------------------------------
+            ## xのデータ数をy_samp_sに合わせる
+            f_interp_x_m = sp.interpolate.interp1d(y_m_raw, x_m_raw, kind="linear")
+            x_m_interp = f_interp_x_m(y_samp_s)
+            
+            ## ロボ座標系からOAP座標系に回転
+            x_rotate, y_rotate = np.dot(rotate_matrix(azimuth), np.array([x_m_interp, y_samp_s]))
+            
+            data_id = np.arange(1, len(y_samp_s)+1)
+            beam_id = 1 * np.ones(len(y_samp_s))
+            arr_save = np.array([data_id, x_rotate, y_rotate, height_diff, beam_id]).T
+            np.savetxt(write_fname, arr_save, fmt=["%.0f", "%.4f","%.4f","%.9f","%.0f"])
+            
         ## plot--------------------------------------------------------------------
         ax43.plot(y_samp_s, sag_m_interp_diff, color=color[j], label="start = "+str(y_samp_s.max()))
         ax41.plot(y_samp_s, tilt, color=color[j])
