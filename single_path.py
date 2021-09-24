@@ -43,9 +43,11 @@ def read_raw_measurement(fname, full=False):
 def read_raw_calc(fname, full=False):
     # x, y, z, rho, R : [mm]
     # s : [mm] -> [nm]
-    raw = np.loadtxt("raw_data/sample.csv", delimiter=",", skiprows=1, encoding="utf-8")
-    x, y, z, rho, R, sag = raw.T
+    raw = np.loadtxt(fname, delimiter=",", skiprows=1, encoding="utf-8")
+    raw = raw.astype("float64")
+    x, y, z, theta, rho, R, sag = raw.T
     sag_nm = sag * 1e6
+    
     if full == False:
         return y, sag_nm
     else:
@@ -53,8 +55,6 @@ def read_raw_calc(fname, full=False):
 
 def y_limb_cut(arr_cut, y_idx, y_min, y_max):
     """
-    
-
     Parameters
     ----------
     arr_cut : array
@@ -86,22 +86,30 @@ def poly_calc(fanc, x):
     for i in range(order):
         y = y + fanc[i]*x**i    
     return y
+
 """
 def size_adjust(X, sag_func, y):    
     a, b, c = X
     sag_abc =  a*poly_calc(sag_func, y-b) + c
     return sag_abc
 """  
-def size_adjust(X, sag_func, y):    
+
+def pythagoras(x, args):
+    fz, y_init = args
+    vert = poly_calc(fz, y_init+x) - poly_calc(fz, y_init)
+    hori = x
+    return vert**2 + hori**2 - 400
+
+def size_adjust(X, sag_func, y, a):    
     b, c = X
     sag_bc =  a*poly_calc(sag_func, y-b) + c
     return sag_bc
     
 
 def fitting_func(X, Param):
-    sag_m, sag_c_func, y = Param
+    sag_m, sag_c_func, y, a = Param
     
-    sag_c_adjust = size_adjust(X, sag_c_func, y)
+    sag_c_adjust = size_adjust(X, sag_c_func, y, a)
     sigma = sum( (sag_m - sag_c_adjust)**2 )
     return sigma
 
@@ -111,7 +119,6 @@ def rotate_matrix(theta_deg):
                        [-np.sin(theta), np.cos(theta)]])
     return matrix
     
-
 if __name__ == '__main__':
     pitch_s = 20 #[mm]
     y_min, y_max = -750,750
@@ -123,7 +130,7 @@ if __name__ == '__main__':
     azimuth = int(azimuth_m_raw[0] + 9.893)
     
     ## caluculated data reading
-    y_c_raw, sag_c_raw = read_raw_calc("raw_data/sample.csv")
+    y_c_raw, sag_c_raw, z_c_raw = read_raw_calc("raw_data/sample.csv", full=True)
     
     ## =======================================================================
     ## 前処理
@@ -138,24 +145,22 @@ if __name__ == '__main__':
     f_interp_c_cut = np.polynomial.polynomial.polyfit(y_c_raw, sag_c_raw, 4)
     sag_c_interp_cut = poly_calc(f_interp_c_cut, y_samp_cut)
     
-    
     ## =======================================================================
     ## cをmに合わせてfitting
     
     b_init = 0
     c_init = sag_m_interp_cut.mean() - sag_c_interp_cut.mean()
-    param = [sag_m_interp_cut, f_interp_c_cut, y_samp_cut]
+    param = [sag_m_interp_cut, f_interp_c_cut, y_samp_cut, a]
     
     #result1 = sp.optimize.minimize(fitting_func, x0=(1, b_init, c_init), 
-     #                             args=param, method="Powell")
+    #                              args=param, method="Powell")
     result1 = sp.optimize.minimize(fitting_func, x0=(b_init, c_init), 
-                                  args=param, method="Powell")
+                                   args=param, method="Powell")
     
     sag_c_fit = size_adjust(result1.x, f_interp_c_cut, y_samp_cut)
     
     sag_diff = 2*(sag_m_interp_cut - sag_c_fit)
-    
-    
+        
     ## =======================================================================
     ## y方向のデータ幅を20mmにして逐次積分
     polyfit_order = 6
@@ -179,8 +184,9 @@ if __name__ == '__main__':
     ax44.set_ylabel("height - " + str(polyfit_order)+" order polyfit")
     ax44.grid()
     
+    f_z_interp_c = np.polynomial.polynomial.polyfit(y_c_raw, z_c_raw, 4)
     
-    y_start_num = 1
+    y_start_num = 4
     y_start_pitch = 5
     save_num = 1
     y_min_s = y_min + y_start_num * y_start_pitch
@@ -190,8 +196,19 @@ if __name__ == '__main__':
     
     for j in range(y_start_num):
         
-        y_samp_s = np.arange(y_max - j*y_start_pitch, y_min + j*y_start_pitch, -pitch_s, dtype="float")
+        y0 = y_max - j * y_start_pitch
+        y_samp_s = [y0]
         
+        for i in range(100):
+            sol = sp.optimize.newton(pythagoras, 20, args=((f_z_interp_c, y_samp_s[i]),))
+            y0 = y0 - sol
+            y_samp_s.append(y0)
+            
+            if y0 <= -730:
+                break
+        
+        y_samp_s = np.array(y_samp_s)
+
         f_interp_diff = sp.interpolate.interp1d(y_samp_cut, sag_diff, kind="cubic")
         sag_m_interp_diff = f_interp_diff(y_samp_s)
         
@@ -225,14 +242,12 @@ if __name__ == '__main__':
         ax43.plot(y_samp_s, sag_m_interp_diff, color=color[j], label="start = "+str(y_samp_s.max()))
         ax41.plot(y_samp_s, tilt, color=color[j])
 
-        
         ax42.plot(y_samp_s, height, color=color[j])
         ax42.plot(y_samp_s, height_fit, marker=".", color=color[j+4], label="fit for "+str(y_samp_s.max()))
         ax44.plot(y_samp_s, height_diff, color=color[j])
     
     ax43.legend()
     ax42.legend()
-    
     
     ax45 = fig4.add_subplot(gs4[0,0])
     ax45.plot(y_m_raw, sag_m_raw)
@@ -253,8 +268,8 @@ if __name__ == '__main__':
     fig4.tight_layout()
     fig4.savefig(mkfolder() + "test.png")
     
-    
     ## plot--------------------------------------------------------------------
+
     """
     fig1 = plt.figure(figsize=(7,12))
     gs1 = fig1.add_gridspec(6,1)
