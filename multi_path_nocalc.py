@@ -37,16 +37,19 @@ if __name__ == '__main__':
     
     a = 1 #縦倍率
     
+    fname_txt = "0922xm130_3deg"
+    data_id_sum = 0
+    write_fname = mkfolder("/"+fname_txt) + fname_txt + "_height.txt"
+    
     start = time.time()
     for k in range(120):
         print(k)
         print(time.time() - start)
         fnum = str(k).zfill(3)
         ## measurement data reading
-        fname_txt = "0922xm130_3deg"
         read_fname = "raw_data/"+fname_txt+"/"+fname_txt+"_" + fnum + ".txt"
-        y_m_raw, sag_m_raw, option = sgp.read_raw_measurement(read_fname)
-        azimuth = option[1][0] + 9.893
+        y_m_raw, sag_m_raw, x_m_raw, azimuth_raw = sgp.read_raw_measurement(read_fname, full=True)
+        azimuth = int(azimuth_raw[0] + 9.893)
        
         ## =======================================================================
         ## 前処理
@@ -88,13 +91,15 @@ if __name__ == '__main__':
         ax16.set_ylabel("height - " + str(polyfit_order)+" order polyfit")
         ax16.grid()
         ax16.set_ylim(-1200,1200)
-        
-        
+         
         y_start_num = 4
         y_start_pitch = 5
+        save_num = 0
         y_min_s = y_min + y_start_num * y_start_pitch
         
         color=["blue", "orange", "green", "red", "lightblue", "yellow", "lightgreen", "pink"]
+        
+                
         for j in range(y_start_num):
             
             y_samp_s = np.arange(y_max - j*y_start_pitch, y_min + j*y_start_pitch, -pitch_s, dtype="float")
@@ -112,6 +117,27 @@ if __name__ == '__main__':
             f_height_fit = np.polynomial.polynomial.polyfit(y_samp_s, height, polyfit_order, w=np.ones(len(y_samp_s)))
             height_fit = sgp.poly_calc(f_height_fit, y_samp_s)
             height_diff = height - height_fit
+            
+            if j == save_num:
+                ## savetxt ---------------------------------------------------------------
+                ## xのデータ数をy_samp_sに合わせる
+                f_interp_x_m = sp.interpolate.interp1d(y_m_raw, x_m_raw, kind="linear")
+                x_m_interp = f_interp_x_m(y_samp_s)
+                
+                ## ロボ座標系からOAP座標系に回転
+                x_rotate, y_rotate = np.dot(sgp.rotate_matrix(-azimuth), np.array([x_m_interp, y_samp_s]))
+                
+                data_id = np.arange(1, len(y_samp_s)+1) + data_id_sum
+                beam_id = (k+1) * np.ones(len(y_samp_s))
+                arr_save = np.array([data_id, x_rotate, y_rotate, height_diff, beam_id]).T
+                with open(write_fname, "a") as wf:
+                    np.savetxt(wf, arr_save, fmt=["%.0f", "%.4f","%.4f","%.9f","%.0f"])
+                    np.savetxt(wf, np.array([[0], [k+1]]).T, fmt="%.0f", newline="\n\n")
+                    
+                
+                data_id_sum = data_id_sum + len(y_samp_s)
+                    
+                
             
             ## plot--------------------------------------------------------------------
             ax13.plot(y_samp_s, sag_m_interp_diff, color=color[j], label="start = "+str(y_samp_s.max()))

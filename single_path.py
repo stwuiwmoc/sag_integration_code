@@ -214,7 +214,7 @@ if __name__ == '__main__':
             x_m_interp = f_interp_x_m(y_samp_s)
             
             ## ロボ座標系からOAP座標系に回転
-            x_rotate, y_rotate = np.dot(rotate_matrix(azimuth), np.array([x_m_interp, y_samp_s]))
+            x_rotate, y_rotate = np.dot(rotate_matrix(-azimuth), np.array([x_m_interp, y_samp_s]))
             
             data_id = np.arange(1, len(y_samp_s)+1)
             beam_id = 1 * np.ones(len(y_samp_s))
