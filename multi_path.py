@@ -9,6 +9,7 @@ import numpy as np
 import scipy as sp
 import matplotlib.pyplot as plt
 import time
+import pandas as pd
 
 import single_path as sgp
 
@@ -31,21 +32,22 @@ def mkfolder(suffix = ""):
     return folder
 
 if __name__ == '__main__':
-    pitch_s = 20 #[mm]
+    pitch_s = 20 #[mm] 
     y_min, y_max = -750,750
     b_max_pitch = 50
     
     a = 0.99809 #縦倍率
     
-    fname_txt_m = "0922xm130_3deg"
-    fname_txt_c = "x-130deg3sag"
+    fname_txt_m = "0923xm130_3deg"
+    fname_txt_c = "x-130deg3sag^M0921"
     
     data_id_sum = 0
     write_fname = mkfolder("/"+fname_txt_m) + fname_txt_m + "_height.txt"
     
     start = time.time()
+    y_samp_s_list = []
     
-    for k in range(120):
+    for k in range(1):
         print(k)
         print(time.time() - start)
         fnum = str(k).zfill(3)
@@ -53,11 +55,14 @@ if __name__ == '__main__':
         ## measurement data reading
         read_fname_m = "raw_data/" + fname_txt_m + "/" + fname_txt_m + "_" + fnum + ".txt"
         y_m_raw, sag_m_raw, x_m_raw, azimuth_raw = sgp.read_raw_measurement(read_fname_m, full=True)
-        azimuth = int(azimuth_raw[0] + 9.893)
+        azimuth = round(azimuth_raw[0] + 10.814, 3)
        
         ## caluculated data reading
         read_fname_c = "raw_data/" + fname_txt_c + "/" + fname_txt_c + "_" + fnum + ".csv"
         y_c_raw, sag_c_raw, z_c_raw = sgp.read_raw_calc(read_fname_c, full=True)
+        
+        y_c_cut = sgp.y_limb_cut(y_c_raw, y_c_raw, -799, 797)
+        z_c_cut = sgp.y_limb_cut(z_c_raw, y_c_raw, -799, 797)
         
         ## 前処理
         sag_m_filter = sp.ndimage.filters.median_filter(sag_m_raw, 15)
@@ -80,12 +85,12 @@ if __name__ == '__main__':
                                        args=param, method="Powell")
         
         sag_c_fit = sgp.size_adjust(result1.x, f_interp_c_cut, y_samp_cut, a)
-        
+
         sag_diff = 2*(sag_m_cut - sag_c_fit)
         
         ## =======================================================================
         ## y方向のデータ幅を20mmにして逐次積分
-        polyfit_order = 6
+        polyfit_order = 2
         
         fig1 = plt.figure(figsize=(14,14))
         gs1 = fig1.add_gridspec(4,2)
@@ -99,7 +104,7 @@ if __name__ == '__main__':
         ax14 = fig1.add_subplot(gs1[1,1])
         ax14.set_ylabel("tilt")
         ax14.grid()
-        ax14.set_ylim(-1200,800)
+        ax14.set_ylim(-1500,1000)
         
         ax15 = fig1.add_subplot(gs1[2,1])
         ax15.set_ylabel("height")
@@ -110,7 +115,7 @@ if __name__ == '__main__':
         ax16.grid()
         ax16.set_ylim(-1200,1200)
          
-        f_z_interp_c = np.polynomial.polynomial.polyfit(y_c_raw, z_c_raw, 4)
+        f_z_interp_c = np.polynomial.polynomial.polyfit(y_c_cut, z_c_cut, 4)
         
         y_start_num = 4
         y_start_pitch = 5
@@ -118,6 +123,8 @@ if __name__ == '__main__':
         y_min_s = y_min + y_start_num * y_start_pitch
         
         color=["blue", "orange", "green", "red", "lightblue", "yellow", "lightgreen", "pink"]
+        
+        y_samp_s_list = []
         
         for j in range(y_start_num):
             
@@ -133,6 +140,7 @@ if __name__ == '__main__':
                 if y0 <= -730:
                     break
                 
+            y_samp_s_list.append(y_samp_s)
             y_samp_s = np.array(y_samp_s)
             
             ## サグの誤差を20mmピッチで補間

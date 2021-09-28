@@ -27,7 +27,7 @@ def mkfolder(suffix = ""):
     return folder
 
 if __name__ == "__main__":
-    read_fname = "raw_data/x-130deg3sag.csv"
+    read_fname = "raw_data/x-130deg3sag^M0921.csv"
     nametxt = read_fname[9:-4] + "_"
 
     with open(read_fname, encoding="utf-8") as readfile:
