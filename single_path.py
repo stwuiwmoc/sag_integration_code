@@ -96,7 +96,7 @@ def size_adjust(X, sag_func, y):
 
 def pythagoras(x, args):
     fz, y_init = args
-    vert = poly_calc(fz, y_init+x) - poly_calc(fz, y_init)
+    vert = poly_calc(fz, y_init-x) - poly_calc(fz, y_init)
     hori = x
     return vert**2 + hori**2 - 400
 
