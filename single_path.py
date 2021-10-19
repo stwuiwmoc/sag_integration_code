@@ -9,6 +9,7 @@ import numpy as np
 import scipy as sp
 import matplotlib.pyplot as plt
 import pickle
+import csv
 
 def mkfolder(suffix = ""):
     import os
@@ -43,7 +44,8 @@ def read_raw_measurement(fname, full=False):
 def read_raw_calc(fname, full=False):
     # x, y, z, rho, R : [mm]
     # s : [mm] -> [nm]
-    raw = np.loadtxt(fname, delimiter=",", skiprows=1, encoding="utf-8")
+    
+    raw = np.loadtxt(fname, delimiter=",", encoding="utf-8", dtype="str", skiprows=1)
     raw = raw.astype("float64")
     x, y, z, theta, rho, R, sag = raw.T
     sag_nm = sag * 1e6
@@ -51,8 +53,9 @@ def read_raw_calc(fname, full=False):
     if full == False:
         return y, sag_nm
     else:
-        return y, sag_nm, z
-
+        return y, sag_nm, z        
+    
+    
 def y_limb_cut(arr_cut, y_idx, y_min, y_max):
     """
     Parameters
@@ -128,7 +131,7 @@ if __name__ == '__main__':
     ## measurement data reading
     y_m_raw, sag_m_raw, x_m_raw, azimuth_m_raw = read_raw_measurement("raw_data/0921_xm100_0deg.txt", True)
     azimuth = int(azimuth_m_raw[0] + 9.893)
-    
+    raw = read_raw_calc("raw_data/x-130deg3sag^M0921/x-130deg3sag^M0921_000.csv")
     ## caluculated data reading
     y_c_raw, sag_c_raw, z_c_raw = read_raw_calc("raw_data/sample.csv", full=True)
     
