@@ -34,6 +34,16 @@ class Constants:
 
 class MeasurementDataDivide:
     def __init__(self, filepath:str, skiprows:int=3) -> None:
+        """class : MeasurementDataDivede
+
+        Parameters
+        ----------
+        filepath : str
+            filepath of measurement raw data
+        skiprows : int, optional
+            skip row number in pd.read_csv()
+            by default 3
+        """
         self.filepath=filepath
         self.raw=pd.read_csv(self.filepath, skiprows=skiprows, delimiter=" ")
         
