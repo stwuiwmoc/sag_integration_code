@@ -1,4 +1,4 @@
- # -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 Created on Wed Sep 22 16:45:52 2021
 
@@ -40,7 +40,7 @@ def read_raw_measurement(fname, full=False):
         return y, sag
     else:
         return y, sag, x, azimuth
-   
+    
 def read_raw_calc(fname, full=False):
     # x, y, z, rho, R : [mm]
     # s : [mm] -> [nm]
