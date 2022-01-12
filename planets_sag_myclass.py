@@ -53,7 +53,7 @@ class MeasurementDataDivide:
                 pass
             else:
                 print(j)
-                df_temp = df_raw[j+1:i+1]
+                df_temp = df_raw.iloc[j+1:i+1]
                 df_temp["sag"] =( 2* df_temp["Out2"] - (df_temp["Out1"] +df_temp["Out3"]))/2
                 
                 df_list.append(df_temp)
