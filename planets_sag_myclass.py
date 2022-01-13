@@ -83,6 +83,7 @@ class CirclePathIntegration:
         self.consts = Constants
         self.df_raw = DataFrame
         self.df = self.__remove_theta_duplication(theta_end_specifying_value=-19)
+        self.radius = np.mean(np.sqrt(self.df["x"] ** 2 + self.df["y"] ** 2))
         return
 
     def h(self) -> None:
