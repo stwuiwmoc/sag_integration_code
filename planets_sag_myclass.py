@@ -3,6 +3,7 @@ from typing import List
 import numpy as np
 from pandas.core.frame import DataFrame
 import scipy as sp
+from scipy import ndimage
 import matplotlib.pyplot as plt
 import pickle
 import csv
@@ -83,6 +84,7 @@ class CirclePathIntegration:
         self.consts = Constants
         self.df_raw = DataFrame
         self.df = self.__remove_theta_duplication(theta_end_specifying_value=-19)
+        self.df["sag_smooth"] = ndimage.filters.gaussian_filter(self.df["sag"], 3)
         self.radius = np.mean(np.sqrt(self.df["x"] ** 2 + self.df["y"] ** 2))
         return
 
