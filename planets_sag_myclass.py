@@ -64,16 +64,12 @@ class MeasurementDataDivide:
         df_list = []
         j = 0
         for i in range(len(df_raw)):
-            if df_raw.iloc[i:i +
-                           1]["Idx."].values < df_raw.iloc[i +
-                                                           1:i +
-                                                           2]["Idx."].values:
+            if df_raw.iloc[i:i + 1]["Idx."].values < df_raw.iloc[i + 1:i + 2]["Idx."].values:
                 pass
             else:
                 print(j)
                 df_temp = df_raw.iloc[j + 1:i + 1]
-                df_temp["sag"] = (2 * df_temp["Out2"] -
-                                  (df_temp["Out1"] + df_temp["Out3"])) / 2
+                df_temp["sag"] = (2 * df_temp["Out2"] - (df_temp["Out1"] + df_temp["Out3"])) / 2
 
                 df_list.append(df_temp)
                 j = i
