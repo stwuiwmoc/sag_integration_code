@@ -79,7 +79,8 @@ class MeasurementDataDivide:
 
 
 class CirclePathIntegration:
-    def __init__(self, DataFrame: DataFrame) -> None:
+    def __init__(self, Constants, DataFrame: DataFrame) -> None:
+        self.consts = Constants
         self.df_raw = DataFrame
         self.df = self.__remove_theta_duplication(theta_end_specifying_value=-19)
         return
@@ -121,3 +122,6 @@ class CirclePathIntegration:
 
         df_remove_duplication = self.df_raw.iloc[head_duplicate_last_idx:end_duplicate_last_idx]
         return df_remove_duplication
+
+    def __pitch_calculation():
+        return
