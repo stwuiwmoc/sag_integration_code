@@ -84,13 +84,17 @@ class CirclePathIntegration:
         self.consts = Constants
         self.df_raw = DataFrame
 
-        self.df = self.__remove_theta_duplication(theta_end_specifying_value=-19)
-        self.df["sag_smooth"] = ndimage.filters.gaussian_filter(self.df["sag"], 3)
-        self.radius = np.mean(np.sqrt(self.df["x"] ** 2 + self.df["y"] ** 2))
+        self.radius = np.mean(np.sqrt(self.df_raw["x"] ** 2 + self.df_raw["y"] ** 2))
         self.delta_theta_per_20mm_pitch = 2 * np.rad2deg(
             np.arcsin(((self.consts.pitch_length / 2) / self.radius)))
 
+        self.df = self.__remove_theta_duplication(theta_end_specifying_value=-19)
+        self.df["sag_smooth"] = ndimage.filters.gaussian_filter(self.df["sag"], 3)
+
         self.idx_before_pitch, self.theta_pitch, self.sag_pitch = self.__pitch_calculation()
+
+        self.tilt = self.__integration(self.sag_pitch)
+        self.height = self.__integration(self.tilt)
         return
 
     def h(self) -> None:
@@ -98,6 +102,8 @@ class CirclePathIntegration:
 
     def __remove_theta_duplication(self, theta_end_specifying_value: float) -> DataFrame:
         """測定序盤と終盤のthetaの重複分を除去
+        ただし、逐次で高さに直した時に2つ分使えないデータが出るので、
+        その分を考慮して20mmピッチでのdelta theta 3つ分は重複させておく
 
         Parameters
         ----------
@@ -118,7 +124,7 @@ class CirclePathIntegration:
                 pass
             else:
                 end_duplicate_last_idx = j + 1
-                theta_end = df_theta.iloc[end_duplicate_last_idx]
+                theta_end = df_theta.iloc[end_duplicate_last_idx] + 3 * self.delta_theta_per_20mm_pitch
                 break
 
         for i in range(len(df_theta)):
@@ -188,3 +194,11 @@ class CirclePathIntegration:
                   np.array(theta_pitch_list),
                   np.array(sag_pitch_list)]
         return result
+
+    def __integration(self, array):
+        result_list = [0]
+        for i in range(len(array) - 1):
+            result_temp = result_list[i] + array[i]
+            result_list.append(result_temp)
+
+        return np.array(result_list)
