@@ -7,7 +7,7 @@ import importlib
 if __name__ == "__main__":
     importlib.reload(psm)
 
-    CONSTS = psm.Constants(pitch_length=20e-3)
+    CONSTS = psm.Constants(pitch_length=20)  # [mm]
     measurement = psm.MeasurementDataDivide(filepath="raw_data/1216/RT_202112161123_FTP.txt")
 
 # %%
