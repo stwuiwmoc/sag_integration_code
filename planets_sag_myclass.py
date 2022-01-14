@@ -83,9 +83,14 @@ class CirclePathIntegration:
     def __init__(self, Constants, DataFrame: DataFrame) -> None:
         self.consts = Constants
         self.df_raw = DataFrame
+
         self.df = self.__remove_theta_duplication(theta_end_specifying_value=-19)
         self.df["sag_smooth"] = ndimage.filters.gaussian_filter(self.df["sag"], 3)
         self.radius = np.mean(np.sqrt(self.df["x"] ** 2 + self.df["y"] ** 2))
+        self.delta_theta_per_20mm_pitch = 2 * np.rad2deg(
+            np.arcsin(((self.consts.pitch_length / 2) / self.radius)))
+
+        self.idx_before_pitch, self.theta_pitch, self.sag_pitch = self.__pitch_calculation()
         return
 
     def h(self) -> None:
@@ -126,5 +131,60 @@ class CirclePathIntegration:
         df_remove_duplication = self.df_raw.iloc[head_duplicate_last_idx:end_duplicate_last_idx]
         return df_remove_duplication
 
-    def __pitch_calculation():
-        return
+    def __pitch_calculation(self):
+        """20mmピッチの計算
+        """
+        def rate_calculation(target, before_target, after_target):
+            rate = (target - before_target) / (after_target - before_target)
+            return rate
+
+        def target_calculation(rate, before_target, after_target):
+            temp = rate * (after_target - before_target)
+            target = temp + before_target
+            return target
+
+        df_theta = self.df["theta"]
+        df_sag = self.df["sag_smooth"]
+
+        # thetaの切り替わり位置
+        theta_min_idx = self.df["theta"].idxmin()
+
+        before_target_idx_list = [0]
+        theta_pitch_list = [df_theta.iloc[0]]
+        sag_pitch_list = [df_sag.iloc[0]]
+
+        theta_target_value = df_theta.iloc[0] - self.delta_theta_per_20mm_pitch
+
+        for i in range(len(df_theta)):
+            theta_temp = df_theta.iloc[i]
+            if i == theta_min_idx:
+                theta_target_value += 360
+                continue
+
+            elif theta_target_value > theta_temp:
+
+                theta_before_target_value = df_theta.iloc[i - 1]
+                theta_after_target_value = theta_temp
+
+                sag_before_target_value = df_sag.iloc[i - 1]
+                sag_after_target_value = df_sag.iloc[i]
+
+                rate_from_before_target_value = rate_calculation(theta_target_value,
+                                                                 theta_before_target_value,
+                                                                 theta_after_target_value)
+                sag_target_value = target_calculation(rate_from_before_target_value,
+                                                      sag_before_target_value,
+                                                      sag_after_target_value)
+
+                before_target_idx_list.append(i)
+                theta_pitch_list.append(theta_target_value)
+                sag_pitch_list.append(sag_target_value)
+
+                theta_target_value += -self.delta_theta_per_20mm_pitch
+
+            else:
+                pass
+        result = [np.array(before_target_idx_list),
+                  np.array(theta_pitch_list),
+                  np.array(sag_pitch_list)]
+        return result
