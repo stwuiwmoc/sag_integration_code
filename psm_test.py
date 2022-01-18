@@ -12,4 +12,4 @@ if __name__ == "__main__":
 
 # %%
     importlib.reload(psm)
-    c = psm.CirclePathIntegration(CONSTS, measurement.raw_df_list[0])
+    c = psm.CirclePathIntegration(CONSTS, measurement.raw_df_list[0], -5e4)
