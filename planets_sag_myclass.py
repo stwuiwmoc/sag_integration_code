@@ -138,7 +138,7 @@ class CirclePathIntegration:
         return df_remove_duplication
 
     def __pitch_calculation(self):
-        """20mmピッチの計算
+        """20mmピッチの計算と、末尾ではみ出る部分の処理
         """
 
         def linear_interpolation(x_target: float, x_A: float, x_B: float, y_A: float, y_B: float) -> float:
@@ -171,7 +171,7 @@ class CirclePathIntegration:
         df_theta = self.df["theta"]
         df_sag = self.df["sag_smooth"]
 
-        # thetaの切り替わり位置
+        # theta測定出力の -180 -> +180 への切り替わり位置idx
         theta_min_idx = self.df["theta"].idxmin()
 
         theta_pitch_list = [df_theta.iloc[0]]
@@ -182,14 +182,17 @@ class CirclePathIntegration:
         angle_from_head_value = self.delta_theta_per_20mm_pitch
 
         for i in range(len(df_theta)):
+            # 測定出力のthetaを1つずつ取り出す
             theta_temp = df_theta.iloc[i]
+
             if i == theta_min_idx:
-                # thetaの切り替わりへの対応
+                # theta測定出力の -180 -> +180への 切り替わりへの対応
                 theta_target_value += 360
                 continue
 
             elif theta_target_value > theta_temp:
-                # 20mmピッチの計算
+                # 前回の20mmピッチの値をtheta_tempが超えたら
+                # 20mmピッチの値を線形補間する
                 theta_before_target_value = df_theta.iloc[i - 1]
                 theta_after_target_value = theta_temp
 
@@ -202,12 +205,48 @@ class CirclePathIntegration:
                                                         y_A=sag_before_target_value,
                                                         y_B=sag_after_target_value)
 
-                theta_pitch_list.append(theta_target_value)
-                angle_from_head_pitch_list.append(angle_from_head_value)
-                sag_pitch_list.append(sag_target_value)
+                if angle_from_head_value < 360:
+                    # pitchの開始点から1周回転するまでは、
+                    # 20mmピッチの計算結果をlistに追加して次の20mmピッチの計算へ
 
-                theta_target_value += -self.delta_theta_per_20mm_pitch
-                angle_from_head_value += self.delta_theta_per_20mm_pitch
+                    theta_pitch_list.append(theta_target_value)
+                    angle_from_head_pitch_list.append(angle_from_head_value)
+                    sag_pitch_list.append(sag_target_value)
+
+                    theta_target_value += -self.delta_theta_per_20mm_pitch
+                    angle_from_head_value += self.delta_theta_per_20mm_pitch
+                    continue
+
+                else:
+                    # 20mmピッチの最後はピッタリ360degにならないので、
+                    # 末尾だけ360degで終わるように線形補間してループ終了
+                    angle_end_value = 360
+
+                    angle_before_end_value = angle_from_head_pitch_list[-1]
+                    angle_after_end_value = angle_from_head_value
+
+                    theta_before_end_value = theta_pitch_list[-1]
+                    theta_after_end_value = theta_target_value
+
+                    sag_before_end_value = sag_pitch_list[-1]
+                    sag_after_end_value = sag_target_value
+
+                    theta_end_value = linear_interpolation(x_target=angle_end_value,
+                                                           x_A=angle_before_end_value,
+                                                           x_B=angle_after_end_value,
+                                                           y_A=theta_before_end_value,
+                                                           y_B=theta_after_end_value)
+
+                    sag_end_value = linear_interpolation(x_target=angle_end_value,
+                                                         x_A=angle_before_end_value,
+                                                         x_B=angle_after_end_value,
+                                                         y_A=sag_before_end_value,
+                                                         y_B=sag_after_end_value)
+
+                    theta_pitch_list.append(theta_end_value)
+                    angle_from_head_pitch_list.append(angle_end_value)
+                    sag_pitch_list.append(sag_end_value)
+                    break
 
             else:
                 pass
