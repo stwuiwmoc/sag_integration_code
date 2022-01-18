@@ -185,7 +185,7 @@ class CirclePathIntegration:
                                                       sag_after_target_value)
 
                 theta_pitch_list.append(theta_target_value)
-                angle_from_head_pitch_list.append(np.deg2rad(angle_from_head_value))
+                angle_from_head_pitch_list.append(angle_from_head_value)
                 sag_pitch_list.append(sag_target_value)
 
                 theta_target_value += -self.delta_theta_per_20mm_pitch
@@ -196,7 +196,7 @@ class CirclePathIntegration:
 
         theta_pitch_array = np.array(theta_pitch_list)
         sag_pitch_array = np.array(sag_pitch_list)
-        circumference_from_head_pitch_array = self.radius * np.array(angle_from_head_pitch_list)
+        circumference_from_head_pitch_array = self.radius * np.deg2rad(np.array(angle_from_head_pitch_list))
 
         result = [theta_pitch_array,
                   sag_pitch_array,
