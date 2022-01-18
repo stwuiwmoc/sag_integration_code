@@ -91,7 +91,7 @@ class CirclePathIntegration:
         self.df = self.__remove_theta_duplication(theta_end_specifying_value=-19)
         self.df["sag_smooth"] = ndimage.filters.gaussian_filter(self.df["sag"], 3)
 
-        self.idx_before_pitch, self.theta_pitch, self.sag_pitch = self.__pitch_calculation()
+        self.theta_pitch, self.sag_pitch, self.circumference_pitch = self.__pitch_calculation()
 
         self.tilt = self.__integration(self.sag_pitch)
         self.height = self.__integration(self.tilt)
@@ -155,11 +155,12 @@ class CirclePathIntegration:
         # thetaの切り替わり位置
         theta_min_idx = self.df["theta"].idxmin()
 
-        before_target_idx_list = [0]
         theta_pitch_list = [df_theta.iloc[0]]
+        angle_from_head_pitch_list = [0]
         sag_pitch_list = [df_sag.iloc[0]]
 
         theta_target_value = df_theta.iloc[0] - self.delta_theta_per_20mm_pitch
+        angle_from_head_value = 0
 
         for i in range(len(df_theta)):
             theta_temp = df_theta.iloc[i]
@@ -182,17 +183,24 @@ class CirclePathIntegration:
                                                       sag_before_target_value,
                                                       sag_after_target_value)
 
-                before_target_idx_list.append(i)
                 theta_pitch_list.append(theta_target_value)
+                angle_from_head_pitch_list.append(np.deg2rad(angle_from_head_value))
                 sag_pitch_list.append(sag_target_value)
 
                 theta_target_value += -self.delta_theta_per_20mm_pitch
+                angle_from_head_value += self.delta_theta_per_20mm_pitch
 
             else:
                 pass
-        result = [np.array(before_target_idx_list),
-                  np.array(theta_pitch_list),
-                  np.array(sag_pitch_list)]
+
+        theta_pitch_array = np.array(theta_pitch_list)
+        sag_pitch_array = np.array(sag_pitch_list)
+        circumference_from_head_pitch_array = self.radius * np.array(angle_from_head_pitch_list)
+
+        result = [theta_pitch_array,
+                  sag_pitch_array,
+                  circumference_from_head_pitch_array]
+
         return result
 
     def __integration(self, array):
