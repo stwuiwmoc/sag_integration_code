@@ -140,14 +140,33 @@ class CirclePathIntegration:
     def __pitch_calculation(self):
         """20mmピッチの計算
         """
-        def rate_calculation(target, before_target, after_target):
-            rate = (target - before_target) / (after_target - before_target)
-            return rate
 
-        def target_calculation(rate, before_target, after_target):
-            temp = rate * (after_target - before_target)
-            target = temp + before_target
-            return target
+        def linear_interpolation(x_target: float, x_A: float, x_B: float, y_A: float, y_B: float) -> float:
+            """点A(x_A, y_A) と点B(x_B, y_B) の2点間の単純な線形補間
+                y - y_A = n * (x - x_A)
+                但し n = (y_B - y_A) / (x_B - x_A)
+
+            Parameters
+            ----------
+            x_target : float
+                線形補間したいx座標
+            x_A : float
+                targetの一つ前の点のx座標
+            x_B : float
+                targetの一つ後の点のx座標
+            y_A : float
+                targetの一つ前の点のy座標
+            y_B : float
+                targetの一つ後の点のy座標
+
+            Returns
+            -------
+            y: float
+                線形補間されたy座標
+            """
+            n_tilt = (y_B - y_A) / (x_B - x_A)
+            y = n_tilt * (x_target - x_A) + y_A
+            return y
 
         df_theta = self.df["theta"]
         df_sag = self.df["sag_smooth"]
@@ -177,12 +196,11 @@ class CirclePathIntegration:
                 sag_before_target_value = df_sag.iloc[i - 1]
                 sag_after_target_value = df_sag.iloc[i]
 
-                rate_from_before_target_value = rate_calculation(theta_target_value,
-                                                                 theta_before_target_value,
-                                                                 theta_after_target_value)
-                sag_target_value = target_calculation(rate_from_before_target_value,
-                                                      sag_before_target_value,
-                                                      sag_after_target_value)
+                sag_target_value = linear_interpolation(x_target=theta_target_value,
+                                                        x_A=theta_before_target_value,
+                                                        x_B=theta_after_target_value,
+                                                        y_A=sag_before_target_value,
+                                                        y_B=sag_after_target_value)
 
                 theta_pitch_list.append(theta_target_value)
                 angle_from_head_pitch_list.append(angle_from_head_value)
