@@ -160,7 +160,7 @@ class CirclePathIntegration:
         sag_pitch_list = [df_sag.iloc[0]]
 
         theta_target_value = df_theta.iloc[0] - self.delta_theta_per_20mm_pitch
-        angle_from_head_value = 0
+        angle_from_head_value = self.delta_theta_per_20mm_pitch
 
         for i in range(len(df_theta)):
             theta_temp = df_theta.iloc[i]
