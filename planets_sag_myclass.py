@@ -165,11 +165,12 @@ class CirclePathIntegration:
         for i in range(len(df_theta)):
             theta_temp = df_theta.iloc[i]
             if i == theta_min_idx:
+                # thetaの切り替わりへの対応
                 theta_target_value += 360
                 continue
 
             elif theta_target_value > theta_temp:
-
+                # 20mmピッチの計算
                 theta_before_target_value = df_theta.iloc[i - 1]
                 theta_after_target_value = theta_temp
 
