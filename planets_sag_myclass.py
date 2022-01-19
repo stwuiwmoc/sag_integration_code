@@ -40,8 +40,8 @@ class Constants:
 class IdealSagReading:
     def __init__(self, filepath: str) -> None:
         self.filepath = filepath
-        self.df_raw = self.__csv_reading()
-        self.interpolated_function = self.__make_interpolated_function()
+        self.df = self.__csv_reading()
+        self.interpolated_function = self.__make_interpolated_function(theta=self.df["theta_signed"])
 
     def h(self) -> None:
         mkhelp(self)
@@ -59,9 +59,8 @@ class IdealSagReading:
         df_raw["theta_signed"] = theta_signed_array
         return df_raw
 
-    def __make_interpolated_function(self):
-        theta = self.df_raw["theta"]
-        sag = self.df_raw["sag"]
+    def __make_interpolated_function(self, theta):
+        sag = self.df["sag"]
         interpolated_function = interpolate.interp1d(x=theta,
                                                      y=sag,
                                                      kind="cubic",
