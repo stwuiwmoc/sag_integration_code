@@ -1,4 +1,5 @@
 # %%
+from numbers import Integral
 import planets_sag_myclass as psm
 import numpy as np
 import matplotlib.pyplot as plt
@@ -16,3 +17,8 @@ if __name__ == "__main__":
 
     pitch = psm.CirclePathPitch(Constants=CONSTS,
                                 df_measurement=measurement.raw_df_list[0])
+
+    itg = psm.CirclePathIntegration(Constants=CONSTS,
+                                    IdealSagReading=IDEAL_SAG,
+                                    df_pitch=pitch.df_pitch,
+                                    integration_optimize_init=-5e4)

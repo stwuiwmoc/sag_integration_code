@@ -134,9 +134,7 @@ class MeasurementDataDivide:
 class CirclePathPitch:
     def __init__(self, Constants, df_measurement: DataFrame) -> None:
         self.consts = Constants
-        self.ideal_sag = IdealSagReading
         self.df_raw = df_measurement
-        self.integration_optimize_init = integration_optimize_init
 
         self.radius = np.mean(np.sqrt(self.df_raw["x"] ** 2 + self.df_raw["y"] ** 2))
         self.delta_theta_per_20mm_pitch = 2 * np.rad2deg(
@@ -318,6 +316,27 @@ class CirclePathPitch:
 
         return result
 
+
+class CirclePathIntegration:
+    def __init__(self, Constants, IdealSagReading, df_pitch: DataFrame, integration_optimize_init: float) -> None:
+        self.consts = Constants
+        self.ideal_sag = IdealSagReading
+        self.df_pitch = df_pitch
+        self.integration_optimize_init = integration_optimize_init
+
+        sag_fitting_return = self.__sag_fitting()
+        self.sag_optimize_result = sag_fitting_return[0]
+        self.sag_diff = sag_fitting_return[1]
+
+        integration_limb_optimize_return = self.__integration_limb_optimize(self.sag_diff)
+        self.integration_optimize_result = integration_limb_optimize_return[0]
+        self.tilt = integration_limb_optimize_return[1]
+        self.height = integration_limb_optimize_return[2]
+        return
+
+    def h(self) -> None:
+        mkhelp(self)
+
     def __sag_fitting(self):
         def make_sag_difference(measured: float, ideal: float, vertical_magn: float, vertical_shift: float) -> float:
             """理想サグと測定サグの差分をとる
@@ -353,8 +372,8 @@ class CirclePathPitch:
 
             return sigma
 
-        measured_theta = self.theta_pitch
-        measured_sag = self.sag_pitch
+        measured_theta = self.df_pitch["theta"]
+        measured_sag = self.df_pitch["sag"]
         ideal_sag = self.ideal_sag.interpolated_function(measured_theta)
 
         params = [measured_sag, ideal_sag, self.consts.vertical_magnification]
