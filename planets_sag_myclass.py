@@ -36,6 +36,30 @@ class Constants:
         mkhelp(self)
 
 
+class IdealSagReading:
+    def __init__(self, filepath: str) -> None:
+        self.filepath = filepath
+        self.df_raw = self.__csv_reading()
+        self.interpolated_function = self.__make_interpolated_function()
+
+    def h(self) -> None:
+        mkhelp(self)
+
+    def __csv_reading(self):
+        raw = pd.read_csv(self.filepath,
+                          names=["x", "y", "theta", "sag"])
+        return raw
+
+    def __make_interpolated_function(self):
+        theta = self.df_raw["theta"]
+        sag = self.df_raw["sag"]
+        interpolated_function = interpolate.interp1d(x=theta,
+                                                     y=sag,
+                                                     kind="cubic",
+                                                     fill_value="extrapolate")
+        return interpolated_function
+
+
 class MeasurementDataDivide:
     def __init__(self, filepath: str, skiprows: int = 3) -> None:
         """class : MeasurementDataDivede
