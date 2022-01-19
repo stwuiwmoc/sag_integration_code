@@ -91,7 +91,7 @@ class CirclePathIntegration:
 
         self.theta_pitch, self.sag_pitch, self.circumference_pitch = self.__pitch_calculation()
 
-        self.res, self.tilt, self.height = self.__integration_limb_optimize(self.sag_pitch)
+        self.optimize_result, self.tilt, self.height = self.__integration_limb_optimize(self.sag_pitch)
         return
 
     def h(self) -> None:
@@ -264,7 +264,7 @@ class CirclePathIntegration:
         Parameters
         ----------
         sag : float
-            逐次元にするsag
+            逐次の元にするsag
 
         Returns
         -------
@@ -306,7 +306,7 @@ class CirclePathIntegration:
             x : list
                 フィッティングパラメータ（tiltでの逐次積分の1番目の値）
             params : list
-                逐次元のsag
+                逐次の元のsag
 
             Returns
             -------
