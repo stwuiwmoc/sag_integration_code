@@ -1,5 +1,4 @@
 # %%
-from numbers import Integral
 import planets_sag_myclass as psm
 import numpy as np
 import matplotlib.pyplot as plt
