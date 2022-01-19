@@ -316,7 +316,25 @@ class CirclePathIntegration:
         return result
 
     def __sag_fitting(self):
-        def make_sag_difference(measured, ideal, vertical_magn, vertical_shift):
+        def make_sag_difference(measured: float, ideal: float, vertical_magn: float, vertical_shift: float) -> float:
+            """理想サグと測定サグの差分をとる
+
+            Parameters
+            ----------
+            measured : float
+                測定値
+            ideal : float
+                理想値
+            vertical_magn : float
+                縦倍率
+            vertical_shift : float
+                縦ずれ
+
+            Returns
+            -------
+            float
+                （測定sag）-（縦ずれ、縦倍率を処理した理想sag）
+            """
             ideal_shifted = vertical_magn * ideal + vertical_shift
             difference = measured - ideal_shifted
             return difference
