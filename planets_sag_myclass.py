@@ -39,6 +39,14 @@ class Constants:
 
 class IdealSagReading:
     def __init__(self, filepath_ideal_sag: str) -> None:
+        """Class : IdealSagReading
+        鍵谷先生の円環パスでの理想サグを読み込み、補間用の関数を作る
+
+        Parameters
+        ----------
+        filepath_ideal_sag : str
+            理想サグのpath
+        """
         self.filepath = filepath_ideal_sag
         self.df = self.__csv_reading()
         self.interpolated_function = self.__make_interpolated_function(theta=self.df["theta_signed"])
