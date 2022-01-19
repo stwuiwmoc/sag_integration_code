@@ -102,9 +102,10 @@ class MeasurementDataDivide:
 
 
 class CirclePathIntegration:
-    def __init__(self, Constants, DataFrame: DataFrame, integration_optimize_init: float) -> None:
+    def __init__(self, Constants, IdealSagReading, df_measurement: DataFrame, integration_optimize_init: float) -> None:
         self.consts = Constants
-        self.df_raw = DataFrame
+        self.ideal_sag = IdealSagReading
+        self.df_raw = df_measurement
         self.integration_optimize_init = integration_optimize_init
 
         self.radius = np.mean(np.sqrt(self.df_raw["x"] ** 2 + self.df_raw["y"] ** 2))
