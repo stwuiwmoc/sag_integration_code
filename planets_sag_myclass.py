@@ -2,12 +2,8 @@
 from typing import List
 import numpy as np
 from pandas.core.frame import DataFrame
-import scipy as sp
 from scipy import ndimage
 from scipy import optimize
-import matplotlib.pyplot as plt
-import pickle
-import csv
 import pandas as pd
 
 
