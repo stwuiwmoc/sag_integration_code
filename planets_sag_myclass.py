@@ -347,7 +347,7 @@ class CirclePathIntegration:
                 result_temp = result_list[i] + array[i]
                 result_list.append(result_temp)
 
-            result_array = np.array(result_list)
+            result_array = np.array(result_list, dtype=float)
 
             return result_array
 
