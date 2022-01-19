@@ -2,11 +2,8 @@
 from typing import List
 import numpy as np
 from pandas.core.frame import DataFrame
-import scipy as sp
 from scipy import ndimage
-import matplotlib.pyplot as plt
-import pickle
-import csv
+from scipy import optimize
 import pandas as pd
 
 
@@ -80,9 +77,10 @@ class MeasurementDataDivide:
 
 
 class CirclePathIntegration:
-    def __init__(self, Constants, DataFrame: DataFrame) -> None:
+    def __init__(self, Constants, DataFrame: DataFrame, integration_optimize_init: float) -> None:
         self.consts = Constants
         self.df_raw = DataFrame
+        self.integration_optimize_init = integration_optimize_init
 
         self.radius = np.mean(np.sqrt(self.df_raw["x"] ** 2 + self.df_raw["y"] ** 2))
         self.delta_theta_per_20mm_pitch = 2 * np.rad2deg(
@@ -93,8 +91,7 @@ class CirclePathIntegration:
 
         self.theta_pitch, self.sag_pitch, self.circumference_pitch = self.__pitch_calculation()
 
-        self.tilt = self.__integration(self.sag_pitch)
-        self.height = self.__integration(self.tilt)
+        self.optimize_result, self.tilt, self.height = self.__integration_limb_optimize(self.sag_pitch)
         return
 
     def h(self) -> None:
@@ -261,10 +258,81 @@ class CirclePathIntegration:
 
         return result
 
-    def __integration(self, array):
-        result_list = [0]
-        for i in range(len(array) - 1):
-            result_temp = result_list[i] + array[i]
-            result_list.append(result_temp)
+    def __integration_limb_optimize(self, sag: float) -> list:
+        """heightの1番目と最後の値が等しくなるように最適化して逐次積分
 
-        return np.array(result_list)
+        Parameters
+        ----------
+        sag : float
+            逐次の元にするsag
+
+        Returns
+        -------
+        list
+            [OptimizeResult,
+            tilt,
+            height]
+        """
+        def integration(array: float, result_head_value: float) -> float:
+            """逐次積分
+
+            Parameters
+            ----------
+            array : float
+                逐次元の1d-array
+            result_head_value : float
+                逐次結果の1番目に入れる値
+
+            Returns
+            -------
+            float
+                逐次結果
+            """
+            result_list = [result_head_value]
+
+            for i in range(len(array) - 1):
+                result_temp = result_list[i] + array[i]
+                result_list.append(result_temp)
+
+            result_array = np.array(result_list)
+
+            return result_array
+
+        def minimize_function(x: list, params: list) -> float:
+            """optimize.minimizeの引数として渡す関数
+
+            Parameters
+            ----------
+            x : list
+                フィッティングパラメータ（tiltでの逐次積分の1番目の値）
+            params : list
+                逐次の元のsag
+
+            Returns
+            -------
+            float
+                heightの1番目の値と最後の値の差分を0（最小）にする
+            """
+            sag_in_optimize = params[0]
+
+            tilt_in_optimize = integration(sag_in_optimize, x)
+            height_in_optimize = integration(tilt_in_optimize, 0)
+
+            sigma = (height_in_optimize[0] - height_in_optimize[-1]) ** 2
+            return sigma
+
+        params = [sag]
+
+        optimize_result = optimize.minimize(fun=minimize_function,
+                                            x0=[self.integration_optimize_init],
+                                            args=(params, ),
+                                            method="Powell")
+
+        tilt_optimized = integration(sag, optimize_result["x"][0])
+        height_optimized = integration(tilt_optimized, 0)
+
+        result = [optimize_result,
+                  tilt_optimized,
+                  height_optimized]
+
+        return result
