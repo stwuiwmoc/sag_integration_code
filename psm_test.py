@@ -12,7 +12,7 @@ if __name__ == "__main__":
 
 # %%
     importlib.reload(psm)
-    IDEAL_SAG = psm.IdealSagReading(filepath="raw_data/calcCirSagDist01.csv")
+    IDEAL_SAG = psm.IdealSagReading(filepath_ideal_sag="raw_data/calcCirSagDist01.csv")
 
     c = psm.CirclePathIntegration(Constants=CONSTS,
                                   IdealSagReading=IDEAL_SAG,

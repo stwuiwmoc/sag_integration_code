@@ -38,8 +38,8 @@ class Constants:
 
 
 class IdealSagReading:
-    def __init__(self, filepath: str) -> None:
-        self.filepath = filepath
+    def __init__(self, filepath_ideal_sag: str) -> None:
+        self.filepath = filepath_ideal_sag
         self.df = self.__csv_reading()
         self.interpolated_function = self.__make_interpolated_function(theta=self.df["theta_signed"])
 
