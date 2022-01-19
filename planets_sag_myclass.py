@@ -131,24 +131,25 @@ class MeasurementDataDivide:
         return df_list
 
 
-class CirclePathIntegration:
-    def __init__(self, Constants, IdealSagReading, df_measurement: DataFrame, integration_optimize_init: float) -> None:
+class CirclePathPitch:
+    def __init__(self, Constants, df_measurement: DataFrame) -> None:
         self.consts = Constants
-        self.ideal_sag = IdealSagReading
         self.df_raw = df_measurement
-        self.integration_optimize_init = integration_optimize_init
 
         self.radius = np.mean(np.sqrt(self.df_raw["x"] ** 2 + self.df_raw["y"] ** 2))
         self.delta_theta_per_20mm_pitch = 2 * np.rad2deg(
             np.arcsin(((self.consts.pitch_length / 2) / self.radius)))
 
-        self.df = self.__remove_theta_duplication(theta_end_specifying_value=-19)
-        self.df = self.df.assign(sag_smooth=ndimage.filters.gaussian_filter(self.df["sag"], 3))
+        self.df_removed = self.__remove_theta_duplication(theta_end_specifying_value=-19)
+        self.df_removed = self.df_removed.assign(sag_smooth=ndimage.filters.gaussian_filter(self.df_removed["sag"], 3))
 
-        self.theta_pitch, self.sag_pitch, self.circumference_pitch = self.__pitch_calculation()
-        self.res, self.sag_pitch_diff = self.__sag_fitting()
-
-        self.optimize_result, self.tilt, self.height = self.__integration_limb_optimize(self.sag_pitch_diff)
+        pitch_calculation_result = self.__pitch_calculation(dataframe=self.df_removed)
+        self.theta_pitch = pitch_calculation_result[0]
+        self.sag_pitch = pitch_calculation_result[1]
+        self.circumference_pitch = pitch_calculation_result[2]
+        self.df_pitch = pd.DataFrame({"theta": self.theta_pitch,
+                                      "sag": self.sag_pitch,
+                                      "circumference": self.circumference_pitch})
         return
 
     def h(self) -> None:
@@ -191,7 +192,7 @@ class CirclePathIntegration:
         df_remove_duplication = self.df_raw.iloc[head_duplicate_last_idx:end_duplicate_last_idx]
         return df_remove_duplication
 
-    def __pitch_calculation(self):
+    def __pitch_calculation(self, dataframe: DataFrame):
         """20mmピッチの計算と、末尾ではみ出る部分の処理
         """
 
@@ -222,11 +223,11 @@ class CirclePathIntegration:
             y = n_tilt * (x_target - x_A) + y_A
             return y
 
-        df_theta = self.df["theta"]
-        df_sag = self.df["sag_smooth"]
+        df_theta = dataframe["theta"]
+        df_sag = dataframe["sag_smooth"]
 
         # theta測定出力の -180 -> +180 への切り替わり位置idx
-        theta_min_idx = self.df["theta"].idxmin()
+        theta_min_idx = dataframe["theta"].idxmin()
 
         theta_pitch_list = [df_theta.iloc[0]]
         angle_from_head_pitch_list = [0]
@@ -315,6 +316,27 @@ class CirclePathIntegration:
 
         return result
 
+
+class CirclePathIntegration:
+    def __init__(self, Constants, IdealSagReading, df_pitch: DataFrame, integration_optimize_init: float) -> None:
+        self.consts = Constants
+        self.ideal_sag = IdealSagReading
+        self.df_pitch = df_pitch
+        self.integration_optimize_init = integration_optimize_init
+
+        sag_fitting_return = self.__sag_fitting()
+        self.sag_optimize_result = sag_fitting_return[0]
+        self.sag_diff = sag_fitting_return[1]
+
+        integration_limb_optimize_return = self.__integration_limb_optimize(self.sag_diff)
+        self.integration_optimize_result = integration_limb_optimize_return[0]
+        self.tilt = integration_limb_optimize_return[1]
+        self.height = integration_limb_optimize_return[2]
+        return
+
+    def h(self) -> None:
+        mkhelp(self)
+
     def __sag_fitting(self):
         def make_sag_difference(measured: float, ideal: float, vertical_magn: float, vertical_shift: float) -> float:
             """理想サグと測定サグの差分をとる
@@ -350,8 +372,8 @@ class CirclePathIntegration:
 
             return sigma
 
-        measured_theta = self.theta_pitch
-        measured_sag = self.sag_pitch
+        measured_theta = self.df_pitch["theta"]
+        measured_sag = self.df_pitch["sag"]
         ideal_sag = self.ideal_sag.interpolated_function(measured_theta)
 
         params = [measured_sag, ideal_sag, self.consts.vertical_magnification]
