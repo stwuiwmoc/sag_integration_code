@@ -143,6 +143,7 @@ class CirclePathIntegration:
         self.df = self.df.assign(sag_smooth=ndimage.filters.gaussian_filter(self.df["sag"], 3))
 
         self.theta_pitch, self.sag_pitch, self.circumference_pitch = self.__pitch_calculation()
+        self.ideal_sag = self.__sag_fitting()
 
         self.optimize_result, self.tilt, self.height = self.__integration_limb_optimize(self.sag_pitch)
         return
@@ -310,6 +311,12 @@ class CirclePathIntegration:
                   circumference_from_head_pitch_array]
 
         return result
+
+    def __sag_fitting(self):
+        measured_theta = self.theta_pitch
+        measured_sag = self.sag_pitch
+        ideal_sag = self.ideal_sag.interpolated_function(measured_theta)
+        return ideal_sag
 
     def __integration_limb_optimize(self, sag: float) -> list:
         """heightの1番目と最後の値が等しくなるように最適化して逐次積分
