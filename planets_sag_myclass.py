@@ -59,7 +59,19 @@ class IdealSagReading:
         df_raw["theta_signed"] = theta_signed_array
         return df_raw
 
-    def __make_interpolated_function(self, theta):
+    def __make_interpolated_function(self, theta: float):
+        """CirclePathIntegrationでsag補間に使うための関数作成
+
+        Parameters
+        ----------
+        theta : float
+            補間でx軸として使うtheta
+
+        Returns
+        -------
+        function
+            使用時にはfunction(theta) -> 理想sag
+        """
         sag = self.df["sag"]
         interpolated_function = interpolate.interp1d(x=theta,
                                                      y=sag,
