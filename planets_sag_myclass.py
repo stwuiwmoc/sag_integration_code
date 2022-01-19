@@ -22,16 +22,19 @@ def mkhelp(instance):
 
 
 class Constants:
-    def __init__(self, pitch_length) -> None:
+    def __init__(self, pitch_length: float, vertical_magnification: float = 0.99809) -> None:
         """class : Constants
-        all physical length is [mm] in psm
+            all physical length is [mm] in psm
 
         Parameters
         ----------
         pitch_length : float
             picth length in iterated integral（逐次積分）
+        vertical_magnification : float, optional
+            縦倍率, by default 0.99809
         """
         self.pitch_length = pitch_length
+        self.vertical_magnification = vertical_magnification
 
     def h(self) -> None:
         mkhelp(self)
