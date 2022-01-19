@@ -4,6 +4,7 @@ import numpy as np
 from pandas.core.frame import DataFrame
 from scipy import ndimage
 from scipy import optimize
+from scipy import interpolate
 import pandas as pd
 
 
@@ -34,6 +35,57 @@ class Constants:
 
     def h(self) -> None:
         mkhelp(self)
+
+
+class IdealSagReading:
+    def __init__(self, filepath_ideal_sag: str) -> None:
+        """Class : IdealSagReading
+        鍵谷先生の円環パスでの理想サグを読み込み、補間用の関数を作る
+
+        Parameters
+        ----------
+        filepath_ideal_sag : str
+            理想サグのpath
+        """
+        self.filepath = filepath_ideal_sag
+        self.df = self.__csv_reading()
+        self.interpolated_function = self.__make_interpolated_function(theta=self.df["theta_signed"])
+
+    def h(self) -> None:
+        mkhelp(self)
+
+    def __csv_reading(self):
+        df_raw = pd.read_csv(self.filepath,
+                             names=["x", "y", "theta", "sag"])
+
+        # 測定出力に合わせた符号付きthetaを追加
+        theta_array = df_raw["theta"].values
+        theta_signed_array = np.where(theta_array <= 180,
+                                      theta_array,
+                                      theta_array - 360)
+
+        df_raw["theta_signed"] = theta_signed_array
+        return df_raw
+
+    def __make_interpolated_function(self, theta: float):
+        """CirclePathIntegrationでsag補間に使うための関数作成
+
+        Parameters
+        ----------
+        theta : float
+            補間でx軸として使うtheta
+
+        Returns
+        -------
+        function
+            使用時にはfunction(theta) -> 理想sag
+        """
+        sag = self.df["sag"]
+        interpolated_function = interpolate.interp1d(x=theta,
+                                                     y=sag,
+                                                     kind="cubic",
+                                                     fill_value="extrapolate")
+        return interpolated_function
 
 
 class MeasurementDataDivide:
@@ -77,9 +129,10 @@ class MeasurementDataDivide:
 
 
 class CirclePathIntegration:
-    def __init__(self, Constants, DataFrame: DataFrame, integration_optimize_init: float) -> None:
+    def __init__(self, Constants, IdealSagReading, df_measurement: DataFrame, integration_optimize_init: float) -> None:
         self.consts = Constants
-        self.df_raw = DataFrame
+        self.ideal_sag = IdealSagReading
+        self.df_raw = df_measurement
         self.integration_optimize_init = integration_optimize_init
 
         self.radius = np.mean(np.sqrt(self.df_raw["x"] ** 2 + self.df_raw["y"] ** 2))
