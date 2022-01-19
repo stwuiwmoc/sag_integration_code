@@ -47,9 +47,17 @@ class IdealSagReading:
         mkhelp(self)
 
     def __csv_reading(self):
-        raw = pd.read_csv(self.filepath,
-                          names=["x", "y", "theta", "sag"])
-        return raw
+        df_raw = pd.read_csv(self.filepath,
+                             names=["x", "y", "theta", "sag"])
+
+        # 測定出力に合わせた符号付きthetaを追加
+        theta_array = df_raw["theta"].values
+        theta_signed_array = np.where(theta_array <= 180,
+                                      theta_array,
+                                      theta_array - 360)
+
+        df_raw["theta_signed"] = theta_signed_array
+        return df_raw
 
     def __make_interpolated_function(self):
         theta = self.df_raw["theta"]
