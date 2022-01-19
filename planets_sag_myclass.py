@@ -4,6 +4,7 @@ import numpy as np
 from pandas.core.frame import DataFrame
 from scipy import ndimage
 from scipy import optimize
+from scipy import interpolate
 import pandas as pd
 
 
