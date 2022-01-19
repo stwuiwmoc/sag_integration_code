@@ -146,9 +146,9 @@ class CirclePathIntegration:
         self.df = self.df.assign(sag_smooth=ndimage.filters.gaussian_filter(self.df["sag"], 3))
 
         self.theta_pitch, self.sag_pitch, self.circumference_pitch = self.__pitch_calculation()
-        self.ideal_sag = self.__sag_fitting()
+        self.res, self.sag_pitch_diff = self.__sag_fitting()
 
-        self.optimize_result, self.tilt, self.height = self.__integration_limb_optimize(self.sag_pitch)
+        self.optimize_result, self.tilt, self.height = self.__integration_limb_optimize(self.sag_pitch_diff)
         return
 
     def h(self) -> None:
@@ -316,10 +316,42 @@ class CirclePathIntegration:
         return result
 
     def __sag_fitting(self):
+        def make_sag_difference(measured, ideal, vertical_magn, vertical_shift):
+            ideal_shifted = vertical_magn * ideal + vertical_shift
+            difference = measured - ideal_shifted
+            return difference
+
+        def minimize_function(x, params):
+            measured_sag_, ideal_sag_, vertical_magnification_ = params
+            sag_difference = make_sag_difference(measured=measured_sag_,
+                                                 ideal=ideal_sag_,
+                                                 vertical_magn=vertical_magnification_,
+                                                 vertical_shift=x)
+
+            sigma = np.sum(sag_difference) ** 2
+
+            return sigma
+
         measured_theta = self.theta_pitch
         measured_sag = self.sag_pitch
         ideal_sag = self.ideal_sag.interpolated_function(measured_theta)
-        return ideal_sag
+
+        params = [measured_sag, ideal_sag, self.consts.vertical_magnification]
+
+        optimize_result = optimize.minimize(fun=minimize_function,
+                                            x0=0,
+                                            args=(params,),
+                                            method="Powell")
+
+        sag_difference = make_sag_difference(measured=measured_sag,
+                                             ideal=ideal_sag,
+                                             vertical_magn=self.consts.vertical_magnification,
+                                             vertical_shift=optimize_result["x"][0])
+
+        result = [optimize_result,
+                  sag_difference]
+
+        return result
 
     def __integration_limb_optimize(self, sag: float) -> list:
         """heightの1番目と最後の値が等しくなるように最適化して逐次積分
