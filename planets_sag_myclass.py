@@ -140,7 +140,7 @@ class CirclePathIntegration:
             np.arcsin(((self.consts.pitch_length / 2) / self.radius)))
 
         self.df = self.__remove_theta_duplication(theta_end_specifying_value=-19)
-        self.df["sag_smooth"] = ndimage.filters.gaussian_filter(self.df["sag"], 3)
+        self.df = self.df.assign(sag_smooth=ndimage.filters.gaussian_filter(self.df["sag"], 3))
 
         self.theta_pitch, self.sag_pitch, self.circumference_pitch = self.__pitch_calculation()
 
