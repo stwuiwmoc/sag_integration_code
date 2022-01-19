@@ -14,7 +14,5 @@ if __name__ == "__main__":
     importlib.reload(psm)
     IDEAL_SAG = psm.IdealSagReading(filepath_ideal_sag="raw_data/calcCirSagDist01.csv")
 
-    c = psm.CirclePathIntegration(Constants=CONSTS,
-                                  IdealSagReading=IDEAL_SAG,
-                                  df_measurement=measurement.raw_df_list[0],
-                                  integration_optimize_init=-5e4)
+    pitch = psm.CirclePathPitch(Constants=CONSTS,
+                                df_measurement=measurement.raw_df_list[0])
