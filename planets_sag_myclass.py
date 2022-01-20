@@ -123,7 +123,7 @@ class MeasurementDataDivide:
             else:
                 print(j)
                 df_temp = df_raw.iloc[j + 1:i + 1]
-                df_temp["sag"] = (2 * df_temp["Out2"] - (df_temp["Out1"] + df_temp["Out3"])) / 2
+                df_temp = df_temp.assign(sag=((2 * df_temp["Out2"] - (df_temp["Out1"] + df_temp["Out3"])) / 2))
 
                 df_list.append(df_temp)
                 j = i
@@ -140,8 +140,9 @@ class CirclePathPitch:
         self.delta_theta_per_20mm_pitch = 2 * np.rad2deg(
             np.arcsin(((self.consts.pitch_length / 2) / self.radius)))
 
-        self.df_removed = self.__remove_theta_duplication(theta_end_specifying_value=-19)
-        self.df_removed = self.df_removed.assign(sag_smooth=ndimage.filters.gaussian_filter(self.df_removed["sag"], 3))
+        df_temp = self.__remove_theta_duplication(theta_end_specifying_value=-19)
+        self.df_removed = df_temp.assign(sag_smooth=ndimage.filters.gaussian_filter(df_temp["sag"], 3))
+        del df_temp
 
         pitch_calculation_result = self.__pitch_calculation(dataframe=self.df_removed)
         self.theta_pitch = pitch_calculation_result[0]
