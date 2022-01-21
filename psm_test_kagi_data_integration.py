@@ -16,6 +16,7 @@ if __name__ == "__main__":
     importlib.reload(psm)
 
     pitch = psm.CirclePathPitch(Constants=CONSTS,
+                                IdealSagReading=IDEAL_SAG,
                                 df_measurement=mes.df_float)
 
     itg = psm.CirclePathIntegration(Constants=CONSTS,
