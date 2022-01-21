@@ -51,26 +51,38 @@ class IdealSagReading:
             理想サグのpath
         """
         self.filepath = filepath_ideal_sag
-        self.df = self.__csv_reading()
+        self.df_raw = pd.read_csv(self.filepath,
+                                  names=["x", "y", "theta", "sag"])
+
+        self.df = self.__theta_add_sign(df_raw=self.df_raw)
         self.interpolated_function = self.__make_interpolated_function(theta=self.df["theta_signed"])
 
     def h(self) -> None:
         mkhelp(self)
 
-    def __csv_reading(self):
-        df_raw = pd.read_csv(self.filepath,
-                             names=["x", "y", "theta", "sag"])
+    def __theta_add_sign(self, df_raw):
+        """ロボと同じ符号付の値theta_signedを追加し、外挿用にtheta_signedの両端を90deg分複製
 
-        # 測定出力に合わせた符号付きthetaを追加
-        theta_array = df_raw["theta"].values
-        theta_signed_array = np.where(theta_array <= 180,
-                                      theta_array,
-                                      theta_array - 360)
+        Parameters
+        ----------
+        df_raw : dataframe
+            [description]
 
-        df_raw["theta_signed"] = theta_signed_array
-        return df_raw
+        Returns
+        -------
+        dataframe
+            theta_signedを追加し外挿用に複製したもの
+        """
+        df_forward = df_raw[df_raw["theta"] < 270]
+        df_backward = df_raw[df_raw["theta"] > 90]
 
-    def __make_interpolated_function(self, theta: float):
+        df_forward_signed = df_forward.assign(theta_signed=df_forward["theta"])
+        df_backward_signed = df_backward.assign(theta_signed=(df_backward["theta"].values - 360))
+        df_concat = pd.concat([df_forward_signed, df_backward_signed], axis=0)
+        df_new = df_concat.reset_index(drop=True)
+        return df_new
+
+    def __make_interpolated_function(self, theta: float, sag: float):
         """CirclePathIntegrationでsag補間に使うための関数作成
 
         Parameters
