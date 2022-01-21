@@ -55,7 +55,8 @@ class IdealSagReading:
                                   names=["x", "y", "theta", "sag"])
 
         self.df = self.__theta_add_sign(df_raw=self.df_raw)
-        self.interpolated_function = self.__make_interpolated_function(theta=self.df["theta_signed"])
+        self.interpolated_function = self.__make_interpolated_function(theta=self.df["theta_signed"],
+                                                                       sag=self.df["sag"])
 
     def h(self) -> None:
         mkhelp(self)
