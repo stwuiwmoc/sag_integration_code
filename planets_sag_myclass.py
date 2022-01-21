@@ -490,3 +490,58 @@ class CirclePathIntegration:
                   height_optimized]
 
         return result
+
+    def __height_fitting(self):
+        def remove_sin_function(x_array, y_array, y_magn, x_shift, y_shift):
+            sin_array = y_magn * np.sin(np.deg2rad(x_array - x_shift)) + y_shift
+            y_diff = y_array - sin_array
+            return y_diff
+
+        def minimize_function(x, params_):
+            theta_, height_ = params_
+            difference = remove_sin_function(x_array=theta_,
+                                             y_array=height_,
+                                             y_magn=x[0],
+                                             x_shift=x[1],
+                                             y_shift=x[2])
+            sigma = np.sum(difference ** 2)
+            return sigma
+
+        def constraints_function(x):
+            theta_, height_ = params
+            difference = remove_sin_function(x_array=theta_,
+                                             y_array=height_,
+                                             y_magn=x[0],
+                                             x_shift=x[1],
+                                             y_shift=x[2])
+            difference_of_head_and_end = difference[0] - difference[-1]
+            formula = 1e-20 - abs(difference_of_head_and_end)
+
+            return formula
+
+        theta = self.theta
+        height = self.height
+
+        params = [theta, height]
+
+        cons = ({"type": "ineq", "fun": constraints_function})
+
+        optimize_result = optimize.minimize(fun=minimize_function,
+                                            x0=[2e5, 0, 1e4],
+                                            args=(params,),
+                                            constraints=cons,
+                                            method="COBYLA")
+
+        sin_removing = - remove_sin_function(theta,
+                                             np.zeros(len(theta)),
+                                             optimize_result["x"][0],
+                                             optimize_result["x"][1],
+                                             optimize_result["x"][2])
+
+        height_optimized = remove_sin_function(theta,
+                                               height,
+                                               optimize_result["x"][0],
+                                               optimize_result["x"][1],
+                                               optimize_result["x"][0])
+
+        return optimize_result, sin_removing, height_optimized
