@@ -346,10 +346,16 @@ class CirclePathPitch:
 
 
 class CirclePathIntegration:
-    def __init__(self, Constants, IdealSagReading, df_pitch: DataFrame, integration_optimize_init: float) -> None:
+    def __init__(self,
+                 Constants,
+                 IdealSagReading,
+                 df_pitch: DataFrame,
+                 integration_optimize_init: float,
+                 height_optimize_init: list) -> None:
         self.consts = Constants
         self.ideal_sag = IdealSagReading
         self.integration_optimize_init = integration_optimize_init
+        self.height_optimize_init = height_optimize_init
 
         self.theta = df_pitch["theta"].values
         self.circumference = df_pitch["circumference"].values
@@ -363,8 +369,9 @@ class CirclePathIntegration:
         self.tilt = self.__integration_limb_optimize(self.sag_diff)[1]
         self.height = self.__integration_limb_optimize(self.sag_diff)[2]
 
-        self.res, self.removed, self.sin = self.__height_fitting()
-        return
+        self.height_optimize_result = self.__height_fitting()["optimize_result"]
+        self.height_removing = self.__height_fitting()["sin_removing"]
+        self.height_removed = self.__height_fitting()["height_optimized"]
 
     def h(self) -> None:
         mkhelp(self)
@@ -551,13 +558,14 @@ class CirclePathIntegration:
 
         theta = self.theta
         height = self.height
+        init = self.height_optimize_init
 
         params = [theta, height]
 
         cons = ({"type": "ineq", "fun": constraints_function})
 
         optimize_result = optimize.minimize(fun=minimize_function,
-                                            x0=[2e5, 0, 1e4],
+                                            x0=init,
                                             args=(params,),
                                             constraints=cons,
                                             method="COBYLA")
@@ -574,4 +582,8 @@ class CirclePathIntegration:
                                                optimize_result["x"][1],
                                                optimize_result["x"][0])
 
-        return optimize_result, sin_removing, height_optimized
+        result_dict = {"optimize_result": optimize_result,
+                       "sin_removing": sin_removing,
+                       "height_optimized": height_optimized}
+
+        return result_dict

@@ -21,7 +21,8 @@ if __name__ == "__main__":
     itg = psm.CirclePathIntegration(Constants=CONSTS,
                                     IdealSagReading=IDEAL_SAG,
                                     df_pitch=pitch.df_pitch,
-                                    integration_optimize_init=-5e4)
+                                    integration_optimize_init=-5e4,
+                                    height_optimize_init=[-3.5e4, 70, -3.5e4])
 
 # %%
     fig1 = plt.figure(figsize=(12, 4))
