@@ -325,6 +325,9 @@ class CirclePathIntegration:
         self.df_pitch = df_pitch
         self.integration_optimize_init = integration_optimize_init
 
+        self.theta = df_pitch["theta"].values
+        self.sag = df_pitch["sag"].values
+
         sag_fitting_return = self.__sag_fitting()
         self.sag_optimize_result = sag_fitting_return[0]
         self.sag_diff = sag_fitting_return[1]
@@ -373,8 +376,8 @@ class CirclePathIntegration:
 
             return sigma
 
-        measured_theta = self.df_pitch["theta"]
-        measured_sag = self.df_pitch["sag"]
+        measured_theta = self.theta
+        measured_sag = self.sag
         ideal_sag = self.ideal_sag.interpolated_function(measured_theta)
 
         params = [measured_sag, ideal_sag, self.consts.vertical_magnification]
