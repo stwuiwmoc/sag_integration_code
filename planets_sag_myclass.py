@@ -1,5 +1,5 @@
 # %%
-from typing import List
+from typing import List, Iterable
 import numpy as np
 from pandas.core.frame import DataFrame
 from scipy import ndimage
@@ -51,39 +51,53 @@ class IdealSagReading:
             理想サグのpath
         """
         self.filepath = filepath_ideal_sag
-        self.df = self.__csv_reading()
+        self.df_raw = pd.read_csv(self.filepath,
+                                  names=["x", "y", "theta", "sag"])
+
+        self.df = self.__theta_add_sign(df_raw=self.df_raw)
         self.interpolated_function = self.__make_interpolated_function(theta=self.df["theta_signed"])
 
     def h(self) -> None:
         mkhelp(self)
 
-    def __csv_reading(self):
-        df_raw = pd.read_csv(self.filepath,
-                             names=["x", "y", "theta", "sag"])
+    def __theta_add_sign(self, df_raw: DataFrame) -> DataFrame:
+        """ロボと同じ符号付の値theta_signedを追加し、外挿用にtheta_signedの両端を90deg分複製
 
-        # 測定出力に合わせた符号付きthetaを追加
-        theta_array = df_raw["theta"].values
-        theta_signed_array = np.where(theta_array <= 180,
-                                      theta_array,
-                                      theta_array - 360)
+        Parameters
+        ----------
+        df_raw : DataFrame
+            [description]
 
-        df_raw["theta_signed"] = theta_signed_array
-        return df_raw
+        Returns
+        -------
+        DataFrame
+            theta_signedを追加し外挿用に複製したもの
+        """
+        df_forward = df_raw[df_raw["theta"] < 270]
+        df_backward = df_raw[df_raw["theta"] > 90]
 
-    def __make_interpolated_function(self, theta: float):
+        df_forward_signed = df_forward.assign(theta_signed=df_forward["theta"])
+        df_backward_signed = df_backward.assign(theta_signed=(df_backward["theta"].values - 360))
+        df_concat = pd.concat([df_forward_signed, df_backward_signed], axis=0)
+        df_new = df_concat.reset_index(drop=True)
+        return df_new
+
+    def __make_interpolated_function(self, theta: Iterable[float], sag: Iterable[float]):
         """CirclePathIntegrationでsag補間に使うための関数作成
 
         Parameters
         ----------
-        theta : float
+        theta : Iterable[float]
             補間でx軸として使うtheta
+        sag : Iterable[float]
+            補間でy軸として使うsag
 
         Returns
         -------
         function
             使用時にはfunction(theta) -> 理想sag
         """
-        sag = self.df["sag"]
+
         interpolated_function = interpolate.interp1d(x=theta,
                                                      y=sag,
                                                      kind="cubic",
@@ -113,7 +127,7 @@ class MeasurementDataDivide:
     def h(self) -> None:
         mkhelp(self)
 
-    def __raw_data_divide(self) -> List:
+    def __raw_data_divide(self) -> List[DataFrame]:
         df_raw = self.raw
         df_list = []
         j = 0
@@ -123,12 +137,24 @@ class MeasurementDataDivide:
             else:
                 print(j)
                 df_temp = df_raw.iloc[j + 1:i + 1]
-                df_temp["sag"] = (2 * df_temp["Out2"] - (df_temp["Out1"] + df_temp["Out3"])) / 2
+                df_temp = df_temp.assign(sag=((2 * df_temp["Out2"] - (df_temp["Out1"] + df_temp["Out3"])) / 2))
 
                 df_list.append(df_temp)
                 j = i
 
         return df_list
+
+
+class ConnectedSagReading:
+    def __init__(self, filepath: str):
+        self.filepath = filepath
+        columns = ["Idx.", "x", "y", "theta", "Out1", "Out2", "Out3", "sag"]
+        self.df_raw = pd.read_csv(self.filepath,
+                                  names=columns)
+        self.df_float = self.df_raw.astype(float)
+
+    def h(self) -> None:
+        mkhelp(self)
 
 
 class CirclePathPitch:
@@ -140,8 +166,9 @@ class CirclePathPitch:
         self.delta_theta_per_20mm_pitch = 2 * np.rad2deg(
             np.arcsin(((self.consts.pitch_length / 2) / self.radius)))
 
-        self.df_removed = self.__remove_theta_duplication(theta_end_specifying_value=-19)
-        self.df_removed = self.df_removed.assign(sag_smooth=ndimage.filters.gaussian_filter(self.df_removed["sag"], 3))
+        df_temp = self.__remove_theta_duplication(theta_end_specifying_value=-19)
+        self.df_removed = df_temp.assign(sag_smooth=ndimage.filters.gaussian_filter(df_temp["sag"], 3))
+        del df_temp
 
         pitch_calculation_result = self.__pitch_calculation(dataframe=self.df_removed)
         self.theta_pitch = pitch_calculation_result[0]
@@ -318,109 +345,139 @@ class CirclePathPitch:
 
 
 class CirclePathIntegration:
-    def __init__(self, Constants, IdealSagReading, df_pitch: DataFrame, integration_optimize_init: float) -> None:
+    def __init__(self,
+                 Constants,
+                 IdealSagReading,
+                 df_pitch: DataFrame,
+                 integration_optimize_init: float,
+                 height_optimize_init: list[float]) -> None:
+
         self.consts = Constants
         self.ideal_sag = IdealSagReading
-        self.df_pitch = df_pitch
         self.integration_optimize_init = integration_optimize_init
+        self.height_optimize_init = height_optimize_init
 
-        sag_fitting_return = self.__sag_fitting()
-        self.sag_optimize_result = sag_fitting_return[0]
-        self.sag_diff = sag_fitting_return[1]
+        self.theta = df_pitch["theta"].values
+        self.circumference = df_pitch["circumference"].values
+        self.sag = df_pitch["sag"].values
 
-        integration_limb_optimize_return = self.__integration_limb_optimize(self.sag_diff)
-        self.integration_optimize_result = integration_limb_optimize_return[0]
-        self.tilt = integration_limb_optimize_return[1]
-        self.height = integration_limb_optimize_return[2]
-        return
+        self.sag_optimize_result = self.__sag_fitting()[0]
+        self.sag_optimize_removing = self.__sag_fitting()[1]
+        self.sag_diff = self.__sag_fitting()[2]
+
+        self.integration_optimize_result = self.__integration_limb_optimize(self.sag_diff)[0]
+        self.tilt = self.__integration_limb_optimize(self.sag_diff)[1]
+        self.height = self.__integration_limb_optimize(self.sag_diff)[2]
+
+        self.height_optimize_result = self.__height_fitting()["optimize_result"]
+        self.height_removing = self.__height_fitting()["sin_removing"]
+        self.height_removed = self.__height_fitting()["height_optimized"]
 
     def h(self) -> None:
         mkhelp(self)
 
     def __sag_fitting(self):
-        def make_sag_difference(measured: float, ideal: float, vertical_magn: float, vertical_shift: float) -> float:
-            """理想サグと測定サグの差分をとる
+        def make_sag_difference(theta_array: Iterable[float],
+                                measured_array: Iterable[float],
+                                ideal_func,
+                                vertical_magn: float,
+                                vertical_shift: float,
+                                horizontal_shift: float) -> Iterable[float]:
+            """理想サグと測定サグの差分を取る
 
             Parameters
             ----------
-            measured : float
+            theta_array : Iterable[float]
+                theta（横軸）
+            measured_array : Iterable[float]
                 測定値
-            ideal : float
-                理想値
+            ideal_func : function
+                理想値を作る関数
             vertical_magn : float
                 縦倍率
             vertical_shift : float
                 縦ずれ
+            horizontal_shift : float
+                横ずれ
 
             Returns
             -------
-            float
-                （測定sag）-（縦ずれ、縦倍率を処理した理想sag）
+            Iterable[float]
+                （測定sag）-（縦ずれ、横ずれ、縦倍率を処理した理想sag）
             """
-            ideal_shifted = vertical_magn * ideal + vertical_shift
-            difference = measured - ideal_shifted
+
+            ideal_shifted = vertical_magn * ideal_func(theta_array - horizontal_shift) + vertical_shift
+            difference = measured_array - ideal_shifted
             return difference
 
-        def minimize_function(x, params):
-            measured_sag_, ideal_sag_, vertical_magnification_ = params
-            sag_difference = make_sag_difference(measured=measured_sag_,
-                                                 ideal=ideal_sag_,
+        def minimize_function(x: List[float], params: list):
+            measured_theta_, measured_sag_, ideal_sag_func_, vertical_magnification_ = params
+            sag_difference = make_sag_difference(theta_array=measured_theta_,
+                                                 measured_array=measured_sag_,
+                                                 ideal_func=ideal_sag_func_,
                                                  vertical_magn=vertical_magnification_,
-                                                 vertical_shift=x)
+                                                 vertical_shift=x[0],
+                                                 horizontal_shift=x[1])
 
-            sigma = np.sum(sag_difference) ** 2
+            sigma = np.sum(sag_difference ** 2)
 
             return sigma
 
-        measured_theta = self.df_pitch["theta"]
-        measured_sag = self.df_pitch["sag"]
-        ideal_sag = self.ideal_sag.interpolated_function(measured_theta)
+        measured_theta = self.theta
+        measured_sag = self.sag
+        ideal_sag_func = self.ideal_sag.interpolated_function
 
-        params = [measured_sag, ideal_sag, self.consts.vertical_magnification]
+        params = [measured_theta, measured_sag, ideal_sag_func, self.consts.vertical_magnification]
 
         optimize_result = optimize.minimize(fun=minimize_function,
-                                            x0=0,
+                                            x0=(0, 0),
                                             args=(params,),
                                             method="Powell")
 
-        sag_difference = make_sag_difference(measured=measured_sag,
-                                             ideal=ideal_sag,
+        ideal_sag_optimized = - make_sag_difference(theta_array=measured_theta,
+                                                    measured_array=np.zeros(len(measured_sag)),
+                                                    ideal_func=ideal_sag_func,
+                                                    vertical_magn=self.consts.vertical_magnification,
+                                                    vertical_shift=optimize_result["x"][0],
+                                                    horizontal_shift=optimize_result["x"][1])
+
+        sag_difference = make_sag_difference(theta_array=measured_theta,
+                                             measured_array=measured_sag,
+                                             ideal_func=ideal_sag_func,
                                              vertical_magn=self.consts.vertical_magnification,
-                                             vertical_shift=optimize_result["x"][0])
+                                             vertical_shift=optimize_result["x"][0],
+                                             horizontal_shift=optimize_result["x"][1])
 
-        result = [optimize_result,
-                  sag_difference]
+        return optimize_result, ideal_sag_optimized, sag_difference
 
-        return result
-
-    def __integration_limb_optimize(self, sag: float) -> list:
+    def __integration_limb_optimize(self, sag: Iterable[float]) -> List:
         """heightの1番目と最後の値が等しくなるように最適化して逐次積分
 
         Parameters
         ----------
-        sag : float
+        sag : Iterable[float]
             逐次の元にするsag
 
         Returns
         -------
-        list
+        List
             [OptimizeResult,
             tilt,
             height]
         """
-        def integration(array: float, result_head_value: float) -> float:
+        def integration(array: Iterable[float], result_head_value: float) -> Iterable[float]:
             """逐次積分
 
             Parameters
             ----------
-            array : float
+            array : Iterable[float]
                 逐次元の1d-array
             result_head_value : float
                 逐次結果の1番目に入れる値
 
             Returns
             -------
-            float
+            Iterable[float]
                 逐次結果
             """
             result_list = [result_head_value]
@@ -433,12 +490,12 @@ class CirclePathIntegration:
 
             return result_array
 
-        def minimize_function(x: list, params: list) -> float:
+        def minimize_function(x: List[float], params: list) -> float:
             """optimize.minimizeの引数として渡す関数
 
             Parameters
             ----------
-            x : list
+            x : List[float]
                 フィッティングパラメータ（tiltでの逐次積分の1番目の値）
             params : list
                 逐次の元のsag
@@ -471,3 +528,88 @@ class CirclePathIntegration:
                   height_optimized]
 
         return result
+
+    def __height_fitting(self):
+        def remove_sin_function(x_array: Iterable[float],
+                                y_array: Iterable[float],
+                                y_magn: float,
+                                x_shift: float,
+                                y_shift: float) -> Iterable[float]:
+            """縦ずれ、横ずれ、縦倍率を加えたsinを除去
+
+            Parameters
+            ----------
+            x_array : Iterable[float]
+                x軸（theta）
+            y_array : Iterable[float]
+                y軸（height）
+            y_magn : float
+                縦倍率
+            x_shift : float
+                横ずれ
+            y_shift : float
+                縦ずれ
+
+            Returns
+            -------
+            Iterable[float]
+                sinを除去したheight
+            """
+
+            sin_array = y_magn * np.sin(np.deg2rad(x_array - x_shift)) + y_shift
+            y_diff = y_array - sin_array
+            return y_diff
+
+        def minimize_function(x: List[float], params_: list) -> float:
+            theta_, height_ = params_
+            difference = remove_sin_function(x_array=theta_,
+                                             y_array=height_,
+                                             y_magn=x[0],
+                                             x_shift=x[1],
+                                             y_shift=x[2])
+            sigma = np.sum(difference ** 2)
+            return sigma
+
+        def constraints_function(x: List[float]):
+            theta_, height_ = params
+            difference = remove_sin_function(x_array=theta_,
+                                             y_array=height_,
+                                             y_magn=x[0],
+                                             x_shift=x[1],
+                                             y_shift=x[2])
+            difference_of_head_and_end = difference[0] - difference[-1]
+            formula = 1e-20 - abs(difference_of_head_and_end)
+
+            return formula
+
+        theta = self.theta
+        height = self.height
+        init = self.height_optimize_init
+
+        params = [theta, height]
+
+        cons = ({"type": "ineq", "fun": constraints_function})
+
+        optimize_result = optimize.minimize(fun=minimize_function,
+                                            x0=init,
+                                            args=(params,),
+                                            constraints=cons,
+                                            method="COBYLA")
+
+        sin_removing = - remove_sin_function(theta,
+                                             np.zeros(len(theta)),
+                                             optimize_result["x"][0],
+                                             optimize_result["x"][1],
+                                             optimize_result["x"][2])
+
+        height_optimized = remove_sin_function(theta,
+                                               height,
+                                               optimize_result["x"][0],
+                                               optimize_result["x"][1],
+                                               optimize_result["x"][0])
+
+        result_dict = {"optimize_result": optimize_result,
+                       "sin_removing": sin_removing,
+                       "height_optimized": height_optimized}
+
+        return result_dict
