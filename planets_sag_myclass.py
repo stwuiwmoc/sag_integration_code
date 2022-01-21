@@ -1,5 +1,5 @@
 # %%
-from typing import List
+from typing import List, Iterable
 import numpy as np
 from pandas.core.frame import DataFrame
 from scipy import ndimage
@@ -60,17 +60,17 @@ class IdealSagReading:
     def h(self) -> None:
         mkhelp(self)
 
-    def __theta_add_sign(self, df_raw):
+    def __theta_add_sign(self, df_raw: DataFrame) -> DataFrame:
         """ロボと同じ符号付の値theta_signedを追加し、外挿用にtheta_signedの両端を90deg分複製
 
         Parameters
         ----------
-        df_raw : dataframe
+        df_raw : DataFrame
             [description]
 
         Returns
         -------
-        dataframe
+        DataFrame
             theta_signedを追加し外挿用に複製したもの
         """
         df_forward = df_raw[df_raw["theta"] < 270]
@@ -82,15 +82,14 @@ class IdealSagReading:
         df_new = df_concat.reset_index(drop=True)
         return df_new
 
-    def __make_interpolated_function(self, theta: float, sag: float):
+    def __make_interpolated_function(self, theta: Iterable[float], sag: Iterable[float]):
         """CirclePathIntegrationでsag補間に使うための関数作成
 
         Parameters
         ----------
-        theta : float
+        theta : Iterable[float]
             補間でx軸として使うtheta
-
-        sag : float
+        sag : Iterable[float]
             補間でy軸として使うsag
 
         Returns
@@ -128,7 +127,7 @@ class MeasurementDataDivide:
     def h(self) -> None:
         mkhelp(self)
 
-    def __raw_data_divide(self) -> List:
+    def __raw_data_divide(self) -> List[DataFrame]:
         df_raw = self.raw
         df_list = []
         j = 0
@@ -351,7 +350,8 @@ class CirclePathIntegration:
                  IdealSagReading,
                  df_pitch: DataFrame,
                  integration_optimize_init: float,
-                 height_optimize_init: list) -> None:
+                 height_optimize_init: list[float]) -> None:
+
         self.consts = Constants
         self.ideal_sag = IdealSagReading
         self.integration_optimize_init = integration_optimize_init
@@ -377,21 +377,21 @@ class CirclePathIntegration:
         mkhelp(self)
 
     def __sag_fitting(self):
-        def make_sag_difference(theta_array: float,
-                                measured_array: float,
-                                ideal_func: float,
+        def make_sag_difference(theta_array: Iterable[float],
+                                measured_array: Iterable[float],
+                                ideal_func,
                                 vertical_magn: float,
                                 vertical_shift: float,
-                                horizontal_shift: float) -> float:
+                                horizontal_shift: float) -> Iterable[float]:
             """理想サグと測定サグの差分を取る
 
             Parameters
             ----------
-            theta_array : float
+            theta_array : Iterable[float]
                 theta（横軸）
-            measured_array : float
+            measured_array : Iterable[float]
                 測定値
-            ideal_func : float
+            ideal_func : function
                 理想値を作る関数
             vertical_magn : float
                 縦倍率
@@ -402,14 +402,15 @@ class CirclePathIntegration:
 
             Returns
             -------
-            float
+            Iterable[float]
                 （測定sag）-（縦ずれ、横ずれ、縦倍率を処理した理想sag）
             """
+
             ideal_shifted = vertical_magn * ideal_func(theta_array - horizontal_shift) + vertical_shift
             difference = measured_array - ideal_shifted
             return difference
 
-        def minimize_function(x, params):
+        def minimize_function(x: List[float], params: list):
             measured_theta_, measured_sag_, ideal_sag_func_, vertical_magnification_ = params
             sag_difference = make_sag_difference(theta_array=measured_theta_,
                                                  measured_array=measured_sag_,
@@ -449,34 +450,34 @@ class CirclePathIntegration:
 
         return optimize_result, ideal_sag_optimized, sag_difference
 
-    def __integration_limb_optimize(self, sag: float) -> list:
+    def __integration_limb_optimize(self, sag: Iterable[float]) -> List:
         """heightの1番目と最後の値が等しくなるように最適化して逐次積分
 
         Parameters
         ----------
-        sag : float
+        sag : Iterable[float]
             逐次の元にするsag
 
         Returns
         -------
-        list
+        List
             [OptimizeResult,
             tilt,
             height]
         """
-        def integration(array: float, result_head_value: float) -> float:
+        def integration(array: Iterable[float], result_head_value: float) -> Iterable[float]:
             """逐次積分
 
             Parameters
             ----------
-            array : float
+            array : Iterable[float]
                 逐次元の1d-array
             result_head_value : float
                 逐次結果の1番目に入れる値
 
             Returns
             -------
-            float
+            Iterable[float]
                 逐次結果
             """
             result_list = [result_head_value]
@@ -489,12 +490,12 @@ class CirclePathIntegration:
 
             return result_array
 
-        def minimize_function(x: list, params: list) -> float:
+        def minimize_function(x: List[float], params: list) -> float:
             """optimize.minimizeの引数として渡す関数
 
             Parameters
             ----------
-            x : list
+            x : List[float]
                 フィッティングパラメータ（tiltでの逐次積分の1番目の値）
             params : list
                 逐次の元のsag
@@ -529,12 +530,17 @@ class CirclePathIntegration:
         return result
 
     def __height_fitting(self):
-        def remove_sin_function(x_array, y_array, y_magn, x_shift, y_shift):
+        def remove_sin_function(x_array: Iterable[float],
+                                y_array: Iterable[float],
+                                y_magn: float,
+                                x_shift: float,
+                                y_shift: float) -> Iterable[float]:
+
             sin_array = y_magn * np.sin(np.deg2rad(x_array - x_shift)) + y_shift
             y_diff = y_array - sin_array
             return y_diff
 
-        def minimize_function(x, params_):
+        def minimize_function(x: List[float], params_: list) -> float:
             theta_, height_ = params_
             difference = remove_sin_function(x_array=theta_,
                                              y_array=height_,
@@ -544,7 +550,7 @@ class CirclePathIntegration:
             sigma = np.sum(difference ** 2)
             return sigma
 
-        def constraints_function(x):
+        def constraints_function(x: List[float]):
             theta_, height_ = params
             difference = remove_sin_function(x_array=theta_,
                                              y_array=height_,
