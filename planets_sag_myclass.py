@@ -337,6 +337,7 @@ class CirclePathIntegration:
         self.integration_optimize_init = integration_optimize_init
 
         self.theta = df_pitch["theta"].values
+        self.circumference = df_pitch["circumference"].values
         self.sag = df_pitch["sag"].values
 
         self.sag_optimize_result = self.__sag_fitting()[0]
