@@ -90,12 +90,15 @@ class IdealSagReading:
         theta : float
             補間でx軸として使うtheta
 
+        sag : float
+            補間でy軸として使うsag
+
         Returns
         -------
         function
             使用時にはfunction(theta) -> 理想sag
         """
-        sag = self.df["sag"]
+
         interpolated_function = interpolate.interp1d(x=theta,
                                                      y=sag,
                                                      kind="cubic",
