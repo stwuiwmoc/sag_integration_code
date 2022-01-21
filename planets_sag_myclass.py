@@ -370,35 +370,46 @@ class CirclePathIntegration:
         mkhelp(self)
 
     def __sag_fitting(self):
-        def make_sag_difference(measured: float, ideal: float, vertical_magn: float, vertical_shift: float) -> float:
-            """理想サグと測定サグの差分をとる
+        def make_sag_difference(theta_array: float,
+                                measured_array: float,
+                                ideal_func: float,
+                                vertical_magn: float,
+                                vertical_shift: float,
+                                horizontal_shift: float) -> float:
+            """理想サグと測定サグの差分を取る
 
             Parameters
             ----------
-            measured : float
+            theta_array : float
+                theta（横軸）
+            measured_array : float
                 測定値
-            ideal : float
-                理想値
+            ideal_func : float
+                理想値を作る関数
             vertical_magn : float
                 縦倍率
             vertical_shift : float
                 縦ずれ
+            horizontal_shift : float
+                横ずれ
 
             Returns
             -------
             float
-                （測定sag）-（縦ずれ、縦倍率を処理した理想sag）
+                （測定sag）-（縦ずれ、横ずれ、縦倍率を処理した理想sag）
             """
-            ideal_shifted = vertical_magn * ideal + vertical_shift
-            difference = measured - ideal_shifted
+            ideal_shifted = vertical_magn * ideal_func(theta_array - horizontal_shift) + vertical_shift
+            difference = measured_array - ideal_shifted
             return difference
 
         def minimize_function(x, params):
-            measured_sag_, ideal_sag_, vertical_magnification_ = params
-            sag_difference = make_sag_difference(measured=measured_sag_,
-                                                 ideal=ideal_sag_,
+            measured_theta_, measured_sag_, ideal_sag_func_, vertical_magnification_ = params
+            sag_difference = make_sag_difference(theta_array=measured_theta_,
+                                                 measured_array=measured_sag_,
+                                                 ideal_func=ideal_sag_func_,
                                                  vertical_magn=vertical_magnification_,
-                                                 vertical_shift=x)
+                                                 vertical_shift=x[0],
+                                                 horizontal_shift=x[1])
 
             sigma = np.sum(sag_difference ** 2)
 
@@ -406,24 +417,28 @@ class CirclePathIntegration:
 
         measured_theta = self.theta
         measured_sag = self.sag
-        ideal_sag = self.ideal_sag.interpolated_function(measured_theta)
+        ideal_sag_func = self.ideal_sag.interpolated_function
 
-        params = [measured_sag, ideal_sag, self.consts.vertical_magnification]
+        params = [measured_theta, measured_sag, ideal_sag_func, self.consts.vertical_magnification]
 
         optimize_result = optimize.minimize(fun=minimize_function,
-                                            x0=0,
+                                            x0=(0, 0),
                                             args=(params,),
                                             method="Powell")
 
-        ideal_sag_optimized = - make_sag_difference(measured=np.zeros(len(measured_sag)),
-                                                    ideal=ideal_sag,
+        ideal_sag_optimized = - make_sag_difference(theta_array=measured_theta,
+                                                    measured_array=np.zeros(len(measured_sag)),
+                                                    ideal_func=ideal_sag_func,
                                                     vertical_magn=self.consts.vertical_magnification,
-                                                    vertical_shift=optimize_result["x"][0])
+                                                    vertical_shift=optimize_result["x"][0],
+                                                    horizontal_shift=optimize_result["x"][1])
 
-        sag_difference = make_sag_difference(measured=measured_sag,
-                                             ideal=ideal_sag,
+        sag_difference = make_sag_difference(theta_array=measured_theta,
+                                             measured_array=measured_sag,
+                                             ideal_func=ideal_sag_func,
                                              vertical_magn=self.consts.vertical_magnification,
-                                             vertical_shift=optimize_result["x"][0])
+                                             vertical_shift=optimize_result["x"][0],
+                                             horizontal_shift=optimize_result["x"][1])
 
         return optimize_result, ideal_sag_optimized, sag_difference
 
