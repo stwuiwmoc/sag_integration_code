@@ -30,7 +30,7 @@ if __name__ == "__main__":
     ax11 = fig1.add_subplot(gs1[0, 0])
     ax11.scatter(mes.df_float["theta"], mes.df_float["Out1"], s=1, label="s1")
     ax11.scatter(mes.df_float["theta"], mes.df_float["Out2"], s=1, label="s2")
-    ax11.scatter(mes.df_float["theta"], mes.df_float["Out3"], s=1, label="s2")
+    ax11.scatter(mes.df_float["theta"], mes.df_float["Out3"], s=1, label="s3")
     ax11.legend()
 
     ax12 = fig1.add_subplot(gs1[1, 0])
@@ -64,9 +64,10 @@ if __name__ == "__main__":
     ax23.set_ylabel("gradient [nm / pitch]")
 
     ax24 = fig2.add_subplot(gs2[3, 0])
-    ax24.plot(-itg.circumference, itg.height)
-    ax24.plot(-itg.circumference, itg.height_removing)
+    ax24.plot(-itg.circumference, itg.height, label="height")
+    ax24.plot(-itg.circumference, itg.height_removing, label="sin_fitting")
     ax24.set_ylabel("height [nm]")
+    ax24.legend()
 
     ax25 = fig2.add_subplot(gs2[4, 0])
     ax25.plot(-itg.circumference, itg.height_removed)
