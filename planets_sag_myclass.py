@@ -159,9 +159,10 @@ class ConnectedSagReading:
 
 
 class CirclePathPitch:
-    def __init__(self, Constants, df_measurement: DataFrame) -> None:
+    def __init__(self, Constants, IdealSagReading, df_measurement: DataFrame) -> None:
         self.consts = Constants
         self.df_raw = df_measurement
+        self.ideal_sag_const = IdealSagReading
 
         self.radius = np.mean(np.sqrt(self.df_raw["x"] ** 2 + self.df_raw["y"] ** 2))
         self.delta_theta_per_20mm_pitch = 2 * np.rad2deg(
@@ -171,12 +172,20 @@ class CirclePathPitch:
         self.df_removed = df_temp.assign(sag_smooth=ndimage.filters.gaussian_filter(df_temp["sag"], 3))
         del df_temp
 
+        sag_fitting_return = self.__sag_fitting(measured_theta=self.df_removed["theta"],
+                                                measured_sag=self.df_removed["sag_smooth"])
+
+        self.sag_optimize_result = sag_fitting_return["optimize_result"]
+        self.sag_optimize_removing = sag_fitting_return["ideal_sag_optimized"]
+        self.sag_diff = sag_fitting_return["sag_diff"]
+        self.df_removed = self.df_removed.assign(sag_diff=self.sag_diff)
+
         pitch_calculation_result = self.__pitch_calculation(dataframe=self.df_removed)
-        self.theta_pitch = pitch_calculation_result[0]
-        self.sag_pitch = pitch_calculation_result[1]
-        self.circumference_pitch = pitch_calculation_result[2]
+        self.theta_pitch = pitch_calculation_result["theta"]
+        self.sag_diff_pitch = pitch_calculation_result["sag_diff"]
+        self.circumference_pitch = pitch_calculation_result["circumference"]
         self.df_pitch = pd.DataFrame({"theta": self.theta_pitch,
-                                      "sag": self.sag_pitch,
+                                      "sag_diff": self.sag_diff_pitch,
                                       "circumference": self.circumference_pitch})
         return
 
@@ -220,6 +229,85 @@ class CirclePathPitch:
         df_remove_duplication = self.df_raw.iloc[head_duplicate_last_idx:end_duplicate_last_idx]
         return df_remove_duplication
 
+    def __sag_fitting(self,
+                      measured_theta: Iterable[float],
+                      measured_sag: Iterable[float]) -> dict:
+
+        def make_sag_difference(theta_array: Iterable[float],
+                                measured_array: Iterable[float],
+                                ideal_func,
+                                vertical_magn: float,
+                                vertical_shift: float,
+                                horizontal_shift: float) -> Iterable[float]:
+            """理想サグと測定サグの差分を取る
+
+            Parameters
+            ----------
+            theta_array : Iterable[float]
+                theta（横軸）
+            measured_array : Iterable[float]
+                測定値
+            ideal_func : function
+                理想値を作る関数
+            vertical_magn : float
+                縦倍率
+            vertical_shift : float
+                縦ずれ
+            horizontal_shift : float
+                横ずれ
+
+            Returns
+            -------
+            Iterable[float]
+                （測定sag）-（縦ずれ、横ずれ、縦倍率を処理した理想sag）
+            """
+
+            ideal_shifted = vertical_magn * ideal_func(theta_array - horizontal_shift) + vertical_shift
+            difference = measured_array - ideal_shifted
+            return difference
+
+        def minimize_function(x: List[float], params: list):
+            measured_theta_, measured_sag_, ideal_sag_func_, vertical_magnification_ = params
+            sag_difference = make_sag_difference(theta_array=measured_theta_,
+                                                 measured_array=measured_sag_,
+                                                 ideal_func=ideal_sag_func_,
+                                                 vertical_magn=vertical_magnification_,
+                                                 vertical_shift=x[0],
+                                                 horizontal_shift=x[1])
+
+            sigma = np.sum(sag_difference ** 2)
+
+            return sigma
+
+        ideal_sag_func = self.ideal_sag_const.interpolated_function
+
+        params = [measured_theta, measured_sag, ideal_sag_func, self.consts.vertical_magnification]
+
+        optimize_result = optimize.minimize(fun=minimize_function,
+                                            x0=(0, 0),
+                                            args=(params,),
+                                            method="Powell")
+
+        ideal_sag_optimized = - make_sag_difference(theta_array=measured_theta,
+                                                    measured_array=np.zeros(len(measured_sag)),
+                                                    ideal_func=ideal_sag_func,
+                                                    vertical_magn=self.consts.vertical_magnification,
+                                                    vertical_shift=optimize_result["x"][0],
+                                                    horizontal_shift=optimize_result["x"][1])
+
+        sag_difference = make_sag_difference(theta_array=measured_theta,
+                                             measured_array=measured_sag,
+                                             ideal_func=ideal_sag_func,
+                                             vertical_magn=self.consts.vertical_magnification,
+                                             vertical_shift=optimize_result["x"][0],
+                                             horizontal_shift=optimize_result["x"][1])
+
+        result = {"optimize_result": optimize_result,
+                  "ideal_sag_optimized": ideal_sag_optimized,
+                  "sag_diff": sag_difference}
+
+        return result
+
     def __pitch_calculation(self, dataframe: DataFrame):
         """20mmピッチの計算と、末尾ではみ出る部分の処理
         """
@@ -252,7 +340,7 @@ class CirclePathPitch:
             return y
 
         df_theta = dataframe["theta"]
-        df_sag = dataframe["sag_smooth"]
+        df_sag = dataframe["sag_diff"]
 
         # theta測定出力の -180 -> +180 への切り替わり位置idx
         theta_min_idx = dataframe["theta"].idxmin()
@@ -338,9 +426,9 @@ class CirclePathPitch:
         sag_pitch_array = np.array(sag_pitch_list)
         circumference_from_head_pitch_array = self.radius * np.deg2rad(np.array(angle_from_head_pitch_list))
 
-        result = [theta_pitch_array,
-                  sag_pitch_array,
-                  circumference_from_head_pitch_array]
+        result = {"theta": theta_pitch_array,
+                  "sag_diff": sag_pitch_array,
+                  "circumference": circumference_from_head_pitch_array}
 
         return result
 
@@ -354,17 +442,13 @@ class CirclePathIntegration:
                  height_optimize_init: list[float]) -> None:
 
         self.consts = Constants
-        self.ideal_sag = IdealSagReading
+        self.ideal_sag_const = IdealSagReading
         self.integration_optimize_init = integration_optimize_init
         self.height_optimize_init = height_optimize_init
 
         self.theta = df_pitch["theta"].values
         self.circumference = df_pitch["circumference"].values
-        self.sag = df_pitch["sag"].values
-
-        self.sag_optimize_result = self.__sag_fitting()[0]
-        self.sag_optimize_removing = self.__sag_fitting()[1]
-        self.sag_diff = self.__sag_fitting()[2]
+        self.sag_diff = df_pitch["sag_diff"].values
 
         self.integration_optimize_result = self.__integration_limb_optimize(self.sag_diff)[0]
         self.tilt = self.__integration_limb_optimize(self.sag_diff)[1]
@@ -376,80 +460,6 @@ class CirclePathIntegration:
 
     def h(self) -> None:
         mkhelp(self)
-
-    def __sag_fitting(self):
-        def make_sag_difference(theta_array: Iterable[float],
-                                measured_array: Iterable[float],
-                                ideal_func,
-                                vertical_magn: float,
-                                vertical_shift: float,
-                                horizontal_shift: float) -> Iterable[float]:
-            """理想サグと測定サグの差分を取る
-
-            Parameters
-            ----------
-            theta_array : Iterable[float]
-                theta（横軸）
-            measured_array : Iterable[float]
-                測定値
-            ideal_func : function
-                理想値を作る関数
-            vertical_magn : float
-                縦倍率
-            vertical_shift : float
-                縦ずれ
-            horizontal_shift : float
-                横ずれ
-
-            Returns
-            -------
-            Iterable[float]
-                （測定sag）-（縦ずれ、横ずれ、縦倍率を処理した理想sag）
-            """
-
-            ideal_shifted = vertical_magn * ideal_func(theta_array - horizontal_shift) + vertical_shift
-            difference = measured_array - ideal_shifted
-            return difference
-
-        def minimize_function(x: List[float], params: list):
-            measured_theta_, measured_sag_, ideal_sag_func_, vertical_magnification_ = params
-            sag_difference = make_sag_difference(theta_array=measured_theta_,
-                                                 measured_array=measured_sag_,
-                                                 ideal_func=ideal_sag_func_,
-                                                 vertical_magn=vertical_magnification_,
-                                                 vertical_shift=x[0],
-                                                 horizontal_shift=x[1])
-
-            sigma = np.sum(sag_difference ** 2)
-
-            return sigma
-
-        measured_theta = self.theta
-        measured_sag = self.sag
-        ideal_sag_func = self.ideal_sag.interpolated_function
-
-        params = [measured_theta, measured_sag, ideal_sag_func, self.consts.vertical_magnification]
-
-        optimize_result = optimize.minimize(fun=minimize_function,
-                                            x0=(0, 0),
-                                            args=(params,),
-                                            method="Powell")
-
-        ideal_sag_optimized = - make_sag_difference(theta_array=measured_theta,
-                                                    measured_array=np.zeros(len(measured_sag)),
-                                                    ideal_func=ideal_sag_func,
-                                                    vertical_magn=self.consts.vertical_magnification,
-                                                    vertical_shift=optimize_result["x"][0],
-                                                    horizontal_shift=optimize_result["x"][1])
-
-        sag_difference = make_sag_difference(theta_array=measured_theta,
-                                             measured_array=measured_sag,
-                                             ideal_func=ideal_sag_func,
-                                             vertical_magn=self.consts.vertical_magnification,
-                                             vertical_shift=optimize_result["x"][0],
-                                             horizontal_shift=optimize_result["x"][1])
-
-        return optimize_result, ideal_sag_optimized, sag_difference
 
     def __integration_limb_optimize(self, sag: Iterable[float]) -> List:
         """heightの1番目と最後の値が等しくなるように最適化して逐次積分
