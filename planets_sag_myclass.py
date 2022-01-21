@@ -535,6 +535,26 @@ class CirclePathIntegration:
                                 y_magn: float,
                                 x_shift: float,
                                 y_shift: float) -> Iterable[float]:
+            """縦ずれ、横ずれ、縦倍率を加えたsinを除去
+
+            Parameters
+            ----------
+            x_array : Iterable[float]
+                x軸（theta）
+            y_array : Iterable[float]
+                y軸（height）
+            y_magn : float
+                縦倍率
+            x_shift : float
+                横ずれ
+            y_shift : float
+                縦ずれ
+
+            Returns
+            -------
+            Iterable[float]
+                sinを除去したheight
+            """
 
             sin_array = y_magn * np.sin(np.deg2rad(x_array - x_shift)) + y_shift
             y_diff = y_array - sin_array
