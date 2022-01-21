@@ -131,6 +131,17 @@ class MeasurementDataDivide:
         return df_list
 
 
+class ConnectedSagReading:
+    def __init__(self, filepath: str):
+        self.filepath = filepath
+        columns = ["Idx.", "x", "y", "theta", "Out1", "Out2", "Out3", "sag"]
+        self.df_raw = pd.read_csv(self.filepath,
+                                  names=columns)
+        self.df_float = self.df_raw.astype(float)
+
+    def h(self) -> None:
+        mkhelp(self)
+
 class CirclePathPitch:
     def __init__(self, Constants, df_measurement: DataFrame) -> None:
         self.consts = Constants
@@ -322,7 +333,6 @@ class CirclePathIntegration:
     def __init__(self, Constants, IdealSagReading, df_pitch: DataFrame, integration_optimize_init: float) -> None:
         self.consts = Constants
         self.ideal_sag = IdealSagReading
-        self.df_pitch = df_pitch
         self.integration_optimize_init = integration_optimize_init
 
         self.theta = df_pitch["theta"].values
