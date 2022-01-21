@@ -442,17 +442,13 @@ class CirclePathIntegration:
                  height_optimize_init: list[float]) -> None:
 
         self.consts = Constants
-        self.ideal_sag = IdealSagReading
+        self.ideal_sag_const = IdealSagReading
         self.integration_optimize_init = integration_optimize_init
         self.height_optimize_init = height_optimize_init
 
         self.theta = df_pitch["theta"].values
         self.circumference = df_pitch["circumference"].values
-        self.sag = df_pitch["sag"].values
-
-        self.sag_optimize_result = self.__sag_fitting()[0]
-        self.sag_optimize_removing = self.__sag_fitting()[1]
-        self.sag_diff = self.__sag_fitting()[2]
+        self.sag_diff = df_pitch["sag_diff"].values
 
         self.integration_optimize_result = self.__integration_limb_optimize(self.sag_diff)[0]
         self.tilt = self.__integration_limb_optimize(self.sag_diff)[1]
