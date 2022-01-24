@@ -449,7 +449,7 @@ class CirclePathIntegration:
         self.sag_diff = df_pitch["sag_diff"].values
 
         self.integration_tilt_optimize_result = self.__integration_limb_optimize(self.sag_diff)[0]
-        self.integration__height_optimize_result = self.__integration_limb_optimize(self.sag_diff)[1]
+        self.integration_height_optimize_result = self.__integration_limb_optimize(self.sag_diff)[1]
         self.tilt = self.__integration_limb_optimize(self.sag_diff)[2]
         self.height = self.__integration_limb_optimize(self.sag_diff)[3]
 
