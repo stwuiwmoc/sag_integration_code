@@ -361,7 +361,7 @@ class CirclePathPitch:
                 theta_target_value += 360
                 continue
 
-            elif theta_target_value > theta_temp:
+            if theta_target_value > theta_temp:
                 # 前回の20mmピッチの値をtheta_tempが超えたら
                 # 20mmピッチの値を線形補間する
                 theta_before_target_value = theta_array[i - 1]
