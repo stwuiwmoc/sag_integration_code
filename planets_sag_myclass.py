@@ -438,21 +438,20 @@ class CirclePathIntegration:
                  Constants,
                  IdealSagReading,
                  df_pitch: DataFrame,
-                 integration_optimize_init: float,
                  height_optimize_init: list[float]) -> None:
 
         self.consts = Constants
         self.ideal_sag_const = IdealSagReading
-        self.integration_optimize_init = integration_optimize_init
         self.height_optimize_init = height_optimize_init
 
         self.theta = df_pitch["theta"].values
         self.circumference = df_pitch["circumference"].values
         self.sag_diff = df_pitch["sag_diff"].values
 
-        self.integration_optimize_result = self.__integration_limb_optimize(self.sag_diff)[0]
-        self.tilt = self.__integration_limb_optimize(self.sag_diff)[1]
-        self.height = self.__integration_limb_optimize(self.sag_diff)[2]
+        self.integration_tilt_optimize_result = self.__integration_limb_optimize(self.sag_diff)[0]
+        self.integration__height_optimize_result = self.__integration_limb_optimize(self.sag_diff)[1]
+        self.tilt = self.__integration_limb_optimize(self.sag_diff)[2]
+        self.height = self.__integration_limb_optimize(self.sag_diff)[3]
 
         self.height_optimize_result = self.__height_fitting()["optimize_result"]
         self.height_removing = self.__height_fitting()["sin_removing"]
@@ -476,13 +475,17 @@ class CirclePathIntegration:
             tilt,
             height]
         """
-        def integration(array: Iterable[float], result_head_value: float) -> Iterable[float]:
+        def integration(array: Iterable[float],
+                        vertical_shift: float,
+                        result_head_value: float) -> Iterable[float]:
             """逐次積分
 
             Parameters
             ----------
             array : Iterable[float]
                 逐次元の1d-array
+            vertical_shift : float
+                縦ずれ
             result_head_value : float
                 逐次結果の1番目に入れる値
 
@@ -492,9 +495,10 @@ class CirclePathIntegration:
                 逐次結果
             """
             result_list = [result_head_value]
+            array_shifted = array + vertical_shift
 
             for i in range(len(array) - 1):
-                result_temp = result_list[i] + array[i]
+                result_temp = result_list[i] + array_shifted[i]
                 result_list.append(result_temp)
 
             result_array = np.array(result_list, dtype=float)
@@ -516,25 +520,38 @@ class CirclePathIntegration:
             float
                 heightの1番目の値と最後の値の差分を0（最小）にする
             """
-            sag_in_optimize = params[0]
+            input_array = params[0]
 
-            tilt_in_optimize = integration(sag_in_optimize, x)
-            height_in_optimize = integration(tilt_in_optimize, 0)
+            output_array = integration(array=input_array,
+                                       vertical_shift=x[0],
+                                       result_head_value=x[1])
 
-            sigma = (height_in_optimize[0] - height_in_optimize[-1]) ** 2
+            sigma = (output_array[0] - output_array[-1]) ** 2
             return sigma
 
-        params = [sag]
+        params_tilt = [sag]
 
-        optimize_result = optimize.minimize(fun=minimize_function,
-                                            x0=[self.integration_optimize_init],
-                                            args=(params, ),
-                                            method="Powell")
+        tilt_optimize_result = optimize.minimize(fun=minimize_function,
+                                                 x0=(0, 0),
+                                                 args=(params_tilt, ),
+                                                 method="Powell")
 
-        tilt_optimized = integration(sag, optimize_result["x"][0])
-        height_optimized = integration(tilt_optimized, 0)
+        tilt_optimized = integration(array=sag,
+                                     vertical_shift=tilt_optimize_result["x"][0],
+                                     result_head_value=tilt_optimize_result["x"][1])
 
-        result = [optimize_result,
+        params_height = [tilt_optimized]
+        height_optimize_result = optimize.minimize(fun=minimize_function,
+                                                   x0=(0, 0),
+                                                   args=(params_height, ),
+                                                   method="Powell")
+
+        height_optimized = integration(array=tilt_optimized,
+                                       vertical_shift=height_optimize_result["x"][0],
+                                       result_head_value=height_optimize_result["x"][1])
+
+        result = [tilt_optimize_result,
+                  height_optimize_result,
                   tilt_optimized,
                   height_optimized]
 
