@@ -208,19 +208,19 @@ class CirclePathPitch:
         df_remove_duplication : DataFrame
             df_rawからthetaの重複部分を除去したもの
         """
-        df_theta = self.df_raw["theta"]
+        theta_array = self.df_raw["theta"].values
 
-        for i in range(len(df_theta)):
+        for i in range(len(theta_array)):
             j = -(i + 1)
-            if df_theta.iloc[j] < theta_end_specifying_value:
+            if theta_array[j] < theta_end_specifying_value:
                 pass
             else:
                 end_duplicate_last_idx = j + 1
-                theta_end = df_theta.iloc[end_duplicate_last_idx] + 3 * self.delta_theta_per_20mm_pitch
+                theta_end = theta_array[end_duplicate_last_idx] + 3 * self.delta_theta_per_20mm_pitch
                 break
 
-        for i in range(len(df_theta)):
-            if df_theta.iloc[i] > theta_end:
+        for i in range(len(theta_array)):
+            if theta_array[i] > theta_end:
                 pass
             else:
                 head_duplicate_last_idx = i - 1
@@ -339,36 +339,36 @@ class CirclePathPitch:
             y = n_tilt * (x_target - x_A) + y_A
             return y
 
-        df_theta = dataframe["theta"]
-        df_sag = dataframe["sag_diff"]
+        theta_array = dataframe["theta"].values
+        sag_array = dataframe["sag_diff"].values
 
         # theta測定出力の -180 -> +180 への切り替わり位置idx
-        theta_min_idx = dataframe["theta"].idxmin()
+        theta_min_idx = theta_array.argmin()
 
-        theta_pitch_list = [df_theta.iloc[0]]
+        theta_pitch_list = [theta_array[0]]
         angle_from_head_pitch_list = [0]
-        sag_pitch_list = [df_sag.iloc[0]]
+        sag_pitch_list = [sag_array[0]]
 
-        theta_target_value = df_theta.iloc[0] - self.delta_theta_per_20mm_pitch
+        theta_target_value = theta_array[0] - self.delta_theta_per_20mm_pitch
         angle_from_head_value = self.delta_theta_per_20mm_pitch
 
-        for i in range(len(df_theta)):
+        for i in range(len(theta_array)):
             # 測定出力のthetaを1つずつ取り出す
-            theta_temp = df_theta.iloc[i]
+            theta_temp = theta_array[i]
 
             if i == theta_min_idx:
                 # theta測定出力の -180 -> +180への 切り替わりへの対応
                 theta_target_value += 360
                 continue
 
-            elif theta_target_value > theta_temp:
+            if theta_target_value > theta_temp:
                 # 前回の20mmピッチの値をtheta_tempが超えたら
                 # 20mmピッチの値を線形補間する
-                theta_before_target_value = df_theta.iloc[i - 1]
+                theta_before_target_value = theta_array[i - 1]
                 theta_after_target_value = theta_temp
 
-                sag_before_target_value = df_sag.iloc[i - 1]
-                sag_after_target_value = df_sag.iloc[i]
+                sag_before_target_value = sag_array[i - 1]
+                sag_after_target_value = sag_array[i]
 
                 sag_target_value = linear_interpolation(x_target=theta_target_value,
                                                         x_A=theta_before_target_value,
