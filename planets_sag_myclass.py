@@ -617,7 +617,7 @@ class CirclePathIntegration:
                                                height,
                                                optimize_result["x"][0],
                                                optimize_result["x"][1],
-                                               optimize_result["x"][0])
+                                               optimize_result["x"][2])
 
         result_dict = {"optimize_result": optimize_result,
                        "sin_removing": sin_removing,
