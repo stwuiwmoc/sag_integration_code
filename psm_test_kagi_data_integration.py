@@ -39,11 +39,14 @@ if __name__ == "__main__":
     ax12.plot(pitch.df_removed["theta"], pitch.df_removed["sag_smooth"], label="measured_sag_smoothed")
     ax12.plot(pitch.df_removed["theta"], pitch.sag_optimize_removing, label="ideal_sag_fitted")
     ax12.set_ylabel("sag [nm]")
+    ax12.legend()
 
     ax13 = fig1.add_subplot(gs1[2, 0])
     ax13.plot(pitch.df_removed["theta"], pitch.df_removed["sag_diff"])
+    ax13.scatter(pitch.theta_pitch, pitch.sag_diff_pitch, s=10, color="red", label="20mm pitch points")
     ax13.set_ylabel("sag deviation [nm]")
     ax13.set_xlabel("robot-coordinate theta[deg]")
+    ax13.legend()
     fig1.tight_layout()
 
 # %%
@@ -52,6 +55,9 @@ if __name__ == "__main__":
 
     ax21 = fig2.add_subplot(gs2[0, 0])
     ax21.plot(-itg.circumference, itg.sag_diff)
+    ax21.scatter(-pitch.circumference_pitch, pitch.sag_diff_pitch, s=10, color="red", label="20mm pitch points")
+    ax21.set_ylabel("sag deviation [nm]")
+    ax21.legend()
 
     ax23 = fig2.add_subplot(gs2[1, 0])
     ax23.plot(-itg.circumference, itg.tilt)
