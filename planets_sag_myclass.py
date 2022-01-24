@@ -581,31 +581,16 @@ class CirclePathIntegration:
             sigma = np.sum(difference ** 2)
             return sigma
 
-        def constraints_function(x: List[float]):
-            theta_, height_ = params
-            difference = remove_sin_function(x_array=theta_,
-                                             y_array=height_,
-                                             y_magn=x[0],
-                                             x_shift=x[1],
-                                             y_shift=x[2])
-            difference_of_head_and_end = difference[0] - difference[-1]
-            formula = 1e-20 - abs(difference_of_head_and_end)
-
-            return formula
-
         theta = self.theta
         height = self.height
         init = self.height_optimize_init
 
         params = [theta, height]
 
-        cons = ({"type": "ineq", "fun": constraints_function})
-
         optimize_result = optimize.minimize(fun=minimize_function,
                                             x0=init,
                                             args=(params,),
-                                            constraints=cons,
-                                            method="COBYLA")
+                                            method="Nelder-Mead")
 
         sin_removing = - remove_sin_function(theta,
                                              np.zeros(len(theta)),
