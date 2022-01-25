@@ -181,11 +181,15 @@ class CirclePathPitch:
         self.df_removed = self.df_removed.assign(sag_diff=self.sag_diff)
 
         pitch_calculation_result = self.__pitch_calculation(dataframe=self.df_removed)
+
         self.theta_pitch = pitch_calculation_result["theta"]
         self.sag_diff_pitch = pitch_calculation_result["sag_diff"]
+        self.angle_from_head_pitch = pitch_calculation_result["angle_from_head"]
         self.circumference_pitch = pitch_calculation_result["circumference"]
+
         self.df_pitch = pd.DataFrame({"theta": self.theta_pitch,
                                       "sag_diff": self.sag_diff_pitch,
+                                      "angle_from_head": self.angle_from_head_pitch,
                                       "circumference": self.circumference_pitch})
         return
 
@@ -424,10 +428,12 @@ class CirclePathPitch:
 
         theta_pitch_array = np.array(theta_pitch_list)
         sag_pitch_array = np.array(sag_pitch_list)
-        circumference_from_head_pitch_array = self.radius * np.deg2rad(np.array(angle_from_head_pitch_list))
+        angle_from_head_pitch_array = np.array(angle_from_head_pitch_list)
+        circumference_from_head_pitch_array = self.radius * np.deg2rad(angle_from_head_pitch_array)
 
         result = {"theta": theta_pitch_array,
                   "sag_diff": sag_pitch_array,
+                  "angle_from_head": angle_from_head_pitch_array,
                   "circumference": circumference_from_head_pitch_array}
 
         return result
@@ -457,6 +463,9 @@ class CirclePathIntegration:
         self.height_optimize_result = self.__height_fitting()["optimize_result"]
         self.height_removing = self.__height_fitting()["sin_removing"]
         self.height_removed = self.__height_fitting()["height_optimized"]
+
+        self.df_save = pd.DataFrame({"angle": df_pitch["angle_from_head"].values,
+                                     "height": self.height_removed})
 
     def h(self) -> None:
         mkhelp(self)
