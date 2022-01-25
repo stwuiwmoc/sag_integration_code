@@ -55,21 +55,26 @@ if __name__ == "__main__":
     ax21 = fig2.add_subplot(gs2[0, 0])
     ax21.plot(-itg.circumference, itg.sag_diff)
     ax21.scatter(-pitch.circumference_pitch, pitch.sag_diff_pitch, s=10, color="red", label="20mm pitch points")
-    ax21.set_ylabel("sag deviation [nm]")
+    ax21.grid()
     ax21.legend()
+    ax21.set_ylabel("sag deviation [nm]")
 
     ax23 = fig2.add_subplot(gs2[1, 0])
     ax23.plot(-itg.circumference, itg.tilt)
+    ax23.grid()
+    ax23.set_ylim(-2000, 2000)
     ax23.set_ylabel("gradient [nm / pitch]")
 
     ax24 = fig2.add_subplot(gs2[2, 0])
     ax24.plot(-itg.circumference, itg.height, label="height")
     ax24.plot(-itg.circumference, itg.height_removing, label="sin_fitting")
-    ax24.set_ylabel("height [nm]")
+    ax24.grid()
     ax24.legend()
+    ax24.set_ylabel("height [nm]")
 
     ax25 = fig2.add_subplot(gs2[3, 0])
     ax25.plot(-itg.circumference, itg.height_removed)
+    ax25.grid()
     ax25.set_ylabel("height_deviation [nm]")
     ax25.set_xlabel("robot-arm scanning coordinate [mm]")
 
