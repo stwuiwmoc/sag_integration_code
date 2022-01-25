@@ -5,12 +5,34 @@ import matplotlib.pyplot as plt
 import importlib
 import pandas as pd
 
+
+def mkfolder(suffix=""):
+    import os
+    """
+    Parameters
+    ----------
+    suffix : str, optional
+        The default is "".
+
+    Returns
+    -------
+    str ( script name + suffix )
+    """
+    filename = os.path.basename(__file__)
+    filename = filename.replace(".py", "") + suffix
+    folder = "mkfolder/" + filename + "/"
+    os.makedirs(folder, exist_ok=True)
+    return folder
+
+
 if __name__ == "__main__":
     importlib.reload(psm)
 
     CONSTS = psm.Constants(pitch_length=20)  # [mm]
     IDEAL_SAG = psm.IdealSagReading(filepath_ideal_sag="raw_data/calcCirSagDist01.csv")
-    mes = psm.ConnectedSagReading(filepath="raw_data/sag_rawdata/0117/0117e.jc_i000.txt")
+
+    input_fname = "raw_data/sag_rawdata/0117/0117e.jc_i000.txt"
+    mes = psm.ConnectedSagReading(filepath=input_fname)
 
 # %%
     importlib.reload(psm)
@@ -79,3 +101,7 @@ if __name__ == "__main__":
     ax25.set_xlabel("robot-arm scanning coordinate [mm]")
 
     fig2.tight_layout()
+
+# %%
+    save_fname = mkfolder() + input_fname[26:31] + "_height.csv"
+    itg.df_save.to_csv(save_fname)
