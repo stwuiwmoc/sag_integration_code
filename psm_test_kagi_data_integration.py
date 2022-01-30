@@ -44,7 +44,6 @@ if __name__ == "__main__":
     itg = psm.CirclePathIntegration(Constants=CONSTS,
                                     IdealSagReading=IDEAL_SAG,
                                     df_pitch=pitch.df_pitch,
-                                    integration_optimize_init=-5e4,
                                     height_optimize_init=[-4e4, 70, -4e4])
 
 # %%
@@ -66,6 +65,7 @@ if __name__ == "__main__":
     ax13 = fig1.add_subplot(gs1[2, 0])
     ax13.plot(pitch.df_removed["theta"], pitch.df_removed["sag_diff"])
     ax13.scatter(pitch.theta_pitch, pitch.sag_diff_pitch, s=10, color="red", label="20mm pitch points")
+    ax13.grid()
     ax13.set_ylabel("sag deviation [nm]")
     ax13.set_xlabel("robot-coordinate theta[deg]")
     ax13.legend()
@@ -105,4 +105,4 @@ if __name__ == "__main__":
 
 # %%
     save_fname = mkfolder() + input_fname[26:31] + "_height.csv"
-    itg.df_save.to_csv(save_fname)
+    itg.df_save.to_csv(save_fname, index=False)
