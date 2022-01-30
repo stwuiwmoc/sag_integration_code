@@ -464,7 +464,7 @@ class CirclePathIntegration:
         self.height_removed = self.__height_fitting()["height_optimized"]
 
         self.df_save = pd.DataFrame({"angle": df_pitch["angle_from_head"].values,
-                                     "height": self.height_removed})
+                                     "height": self.height_removed * 1e-9})
 
     def h(self) -> None:
         mkhelp(self)
