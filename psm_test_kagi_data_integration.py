@@ -31,10 +31,11 @@ if __name__ == "__main__":
     CONSTS = psm.Constants(pitch_length=20)  # [mm]
     IDEAL_SAG = psm.IdealSagReading(filepath_ideal_sag="raw_data/calcCirSagDist01.csv")
 
-    input_fname = "raw_data/sag_rawdata/0117/0117e.jc_i000.txt"
+# %%
+    serial = "0117e"
+    input_fname = "raw_data/sag_rawdata/0117/" + serial + ".jc_i000.txt"
     mes = psm.ConnectedSagReading(filepath=input_fname)
 
-# %%
     importlib.reload(psm)
 
     pitch = psm.CirclePathPitch(Constants=CONSTS,
@@ -46,10 +47,10 @@ if __name__ == "__main__":
                                     df_pitch=pitch.df_pitch,
                                     height_optimize_init=[-4e4, 70, -4e4])
 
-# %%
     fig1 = plt.figure(figsize=(12, 8))
-
     gs1 = fig1.add_gridspec(3, 1)
+    fig1.suptitle(serial)
+
     ax11 = fig1.add_subplot(gs1[0, 0])
     ax11.scatter(mes.df_float["theta"], mes.df_float["Out1"], s=1, label="s1")
     ax11.scatter(mes.df_float["theta"], mes.df_float["Out2"], s=1, label="s2")
@@ -70,10 +71,11 @@ if __name__ == "__main__":
     ax13.set_xlabel("robot-coordinate theta[deg]")
     ax13.legend()
     fig1.tight_layout()
+    fig1.savefig(mkfolder() + serial + "_fig1.png")
 
-# %%
     fig2 = plt.figure(figsize=(12, 12))
     gs2 = fig2.add_gridspec(4, 1)
+    fig2.suptitle(serial)
 
     ax21 = fig2.add_subplot(gs2[0, 0])
     ax21.plot(-itg.circumference, itg.sag_diff)
@@ -102,7 +104,7 @@ if __name__ == "__main__":
     ax25.set_xlabel("robot-arm scanning coordinate [mm]")
 
     fig2.tight_layout()
+    fig2.savefig(mkfolder() + serial + "_fig2.png")
 
-# %%
-    save_fname = mkfolder() + input_fname[26:31] + "_height.csv"
+    save_fname = mkfolder() + serial + "_height.csv"
     itg.df_save.to_csv(save_fname, index=False)
